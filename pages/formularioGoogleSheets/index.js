@@ -51,7 +51,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'http://localhost:8000/api/validar-dni/', // Usa el endpoint de Django
+        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -125,7 +125,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + '' + '-'+ ''+ 'Socio'
       };
 
-      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
+      const response = await axios.post("http://82.112.250.23:1337/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
