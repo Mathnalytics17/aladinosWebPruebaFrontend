@@ -7,7 +7,7 @@ export default function Exito() {
       {/* Imagen */}
       <div style={styles.imageContainer}>
         <Image
-          src="/2304-fundacion-aladiina.jpg"
+          src="/2304-fundacion-aladiina.png"
           alt="Fundación Aladina"
           width={600} // Ancho de la imagen
           height={400} // Alto de la imagen
