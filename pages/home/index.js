@@ -21,7 +21,7 @@ const Home = () => {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          Bienvenido a la página de inicio
+          Bienvenido al formulario de donaciones para la fundación Aladina
         </Typography>
         <Button
           variant="contained"

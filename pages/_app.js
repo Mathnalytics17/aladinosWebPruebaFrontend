@@ -4,6 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Head from "next/head";
 import { useRouter } from "next/router";
 
+import { ToastContainer } from "react-toastify";
 
 
 
@@ -30,6 +31,7 @@ export default function MyApp({ Component, pageProps }) {
        {!pathsWithoutDefaultLayout.includes(router.pathname) &&
             !isErrorPage ? (
               <Layout>
+                 <ToastContainer position="top-right" autoClose={3000} />
                 <Component {...pageProps} />
               </Layout>
             ) : (

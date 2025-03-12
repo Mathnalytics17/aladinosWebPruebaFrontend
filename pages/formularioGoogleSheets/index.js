@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useForm, Controller } from "react-hook-form";
 import axios from "axios";
+import { toast } from "react-toastify"; // Importar toast
 import {
   Container,
   Typography,
@@ -25,15 +26,21 @@ import es from "date-fns/locale/es"; // Locale en español
 import SignatureCanvas from "react-signature-canvas"; // Componente de firma
 import Link from "next/link"; // Importa Link desde next/link
 export default function FormularioGoogleSheets() {
-  const { register, handleSubmit, control, formState: { errors }, setValue, watch } = useForm();
+  const { register, handleSubmit, control, formState: { errors }, setValue, watch,getValues } = useForm({
+    defaultValues: {
+      no_iban: "",
+    
+    },
+  });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isDraft, setIsDraft] = useState(false); // Estado para borrador
   const signatureRefSocio = useRef(null); // Referencia para la firma del socio
   const signatureRefCaptador = useRef(null); // Referencia para la firma del captador
   const router = useRouter(); // Obtén el objeto router
   const [validationError, setValidationError] = useState('');
-  const [loading, setLoading] = useState(false);
+  
   const numeroIdentificacionRef = useRef(null); // Referencia para el campo de Nº Identificación
 
   // Función para validar el Nº de Identificación
@@ -89,21 +96,26 @@ export default function FormularioGoogleSheets() {
   }, [setValue]);
 
   const onSubmit = async (data) => {
+    setLoading(true);
     try {
       // Convertir fecha_nacimiento a objeto Date si es una cadena
       if (typeof data.fecha_nacimiento === "string") {
         data.fecha_nacimiento = new Date(data.fecha_nacimiento);
       }
-
-      const signature = signatureRefSocio.current.toDataURL(); // Obtener firma como imagen
+     
+      // Capturar las firmas como imágenes base64
+    const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
+    const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
       data.importe = data.importe == "otra_cantidad" ? "Otra Cantidad" : data.importe;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
       const formattedData = {
         ...data,
+        firma_socio: firmaSocio, // Agregar firma del socio
+        firma_captador: firmaCaptador, // Agregar firma del captador
         quiere_correspondencia: data.recibe_correspondencia,
         saludo: data.saludo,
-        firma: signature, // Agregar firma al formulario
+        
         fecha_nacimiento: data.fecha_nacimiento.toISOString().split("T")[0], // Formato YYYY-MM-DD
         primer_canal_captacion: "F2F Boost Impact (Madrid)",
         canal_entrada: "F2F",
@@ -114,21 +126,22 @@ export default function FormularioGoogleSheets() {
         tipo_relacion: "Socio",
         importe: data.importe || '',
         otra_cantidad: data.otra_cantidad || '',
-        fecha_primer_pago: data.fecha_primer_pago || '',
+        fecha_primer_pago: '',
         mandato: data.mandato || '',
         persona_id: data.persona_id || '',
         fecha_alta:  null,
         descripcion:'',
         mandato:'',
-        nombre_autom: data.nombre + ''+ '-'+ ''+ 'Domiciliación',
+        nombre_autom: data.nombre + ' '+ data.apellidos+ ' '+ '-'+ ' '+ 'Domiciliación',
         persona_id:'',
-        nombre_asterisco:data.nombre + '' + '-'+ ''+ 'Socio'
+        nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("http://82.112.250.23:1337/api/registro/", formattedData);
+      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
+      toast.success("Formulario enviado con éxito");
       localStorage.removeItem("formDraft"); // Eliminar borrador después de enviar
       // Redirigir a la página de éxito
       router.push("/formularioGoogleSheets/success");
@@ -136,18 +149,137 @@ export default function FormularioGoogleSheets() {
       console.error("Error al enviar el formulario:", error.response?.data || error.message);
       setError("Hubo un error al enviar el formulario");
       setSuccess(false);
+    
+    // Mostrar errores de validación del backend
+    if (error.response?.data) {
+
+      const errorTranslations = {
+        "Ensure this value is less than or equal to 2147483647.": "Asegúrese de que este valor sea menor o igual a 2147483647.",
+        "Ensure this field has no more than 10 characters.": "Asegúrese de que el campo CP no tenga más de 10 caracteres.",
+        // Agrega más traducciones según sea necesario
+      };
+      Object.keys(error.response.data).forEach((key) => {
+        const messages = error.response.data[key].map((msg) => errorTranslations[msg] || msg); // Traducción o mensaje original
+        toast.error(`${key}: ${messages.join(", ")}`);
+      });
+    } else {
+      toast.error("Error de red. Por favor, intenta de nuevo.");
     }
+  } finally {
+    setLoading(false);
+  }
   };
 
-  const saveDraft = (data) => {
-    const signature = signatureRefSocio.current.toDataURL(); // Obtener firma como imagen
-    const draftData = {
-      ...data,
-      firma: signature, // Guardar firma en el borrador
+  const saveDraft = async (data) => {
+    // Verificar que todos los campos obligatorios estén completos (excepto no_iban)
+    const camposObligatorios = [
+      "nombre",
+      "apellidos",
+      "tipo_identificacion",
+      "numero_identificacion",
+      "fecha_nacimiento",
+      "via_principal",
+      "cp_direccion",
+      "ciudad_direccion",
+      "estado_provincia","dia_presentacion",
+      "genero",
+      "recibe_correspondencia",
+      "correo_electronico",
+      "movil",
+      "importe",
+      "periodicidad",
+      "explicacion_donacion_continua", // Validación solo en frontend
+      "explicacion_no_programa_unico", // Validación solo en frontend
+      "aceptacion_socio", // Validación solo en frontend
+      "aceptacion_politica_privacidad", // Validación solo en frontend
+    ];
+  
+    for (const campo of camposObligatorios) {
+      if (!data[campo]) {
+        toast.error(`El campo ${campo} es obligatorio.`);
+        return; // Detener la ejecución si falta un campo obligatorio
+      }
+    }
+  
+    // Formatear la fecha de nacimiento
+    const formatDateToDDMMYYYY = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     };
-    localStorage.setItem("formDraft", JSON.stringify(draftData)); // Guardar borrador en localStorage
+  
+    let fechaNacimiento;
+    if (data.fecha_nacimiento instanceof Date) {
+      fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
+    } else if (typeof data.fecha_nacimiento === "string") {
+      const dateObj = new Date(data.fecha_nacimiento);
+      fechaNacimiento = formatDateToDDMMYYYY(dateObj);
+    } else {
+      fechaNacimiento = "";
+    }
+  
+    // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
+    const draftData = {
+      fundraiser_code:data.fundraiser_code,
+      fundraiser_name:data.fundraiser_name,
+      nombre: data.nombre,
+      apellidos: data.apellidos,
+      tipo_identificacion: data.tipo_identificacion,
+      numero_identificacion: data.numero_identificacion,
+      fecha_nacimiento: fechaNacimiento,
+      via_principal: data.via_principal,
+      cp_direccion: data.cp_direccion,
+      ciudad_direccion: data.ciudad_direccion,
+      estado_provincia: data.estado_provincia,
+      genero: data.genero,
+      recibe_correspondencia: data.recibe_correspondencia,
+      correo_electronico: data.correo_electronico,
+      movil: data.movil,
+      importe: data.importe,
+      otra_cantidad: data.otra_cantidad || '',
+      periodicidad: data.periodicidad,
+      primer_canal_captacion: "F2F Boost Impact (Madrid)",
+      canal_entrada: "F2F",
+      recibe_memoria: "SI",
+      medio_pago: "DOMICILIACIÓN",
+      tipo_pago: "CUOTA",
+      concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
+      tipo_relacion: "Socio",
+      fecha_primer_pago: '',
+      mandato: data.mandato || '',
+      persona_id: data.persona_id || '',
+      fecha_alta: null,
+      descripcion: '',
+      nombre_autom: data.nombre + ' ' + data.apellidos + ' ' + '-' + ' ' + 'Domiciliación',
+      nombre_asterisco: data.nombre + ' ' + data.apellidos + ' ' + '-' + ' ' + 'Socio',
+      dia_presentacion:data.dia_presentacion
+    };
+  
+    // Guardar borrador en localStorage
+    localStorage.setItem("formDraft", JSON.stringify(draftData));
     setIsDraft(true);
-    alert("Borrador guardado correctamente.");
+    toast.info("Borrador guardado correctamente");
+  
+    // Enviar datos al backend
+    try {
+      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(draftData),
+      });
+  
+      if (response.ok) {
+        toast.success("Datos enviados a Google Sheets correctamente");
+      } else {
+        toast.error("Error al enviar datos a Google Sheets");
+      }
+    } catch (error) {
+      console.error("Error al enviar datos:", error);
+      toast.error("Error al enviar datos");
+    }
   };
 
   const clearSignatureSocio = () => {
@@ -171,30 +303,28 @@ export default function FormularioGoogleSheets() {
       {isDraft && <Alert severity="info">Tienes un borrador guardado. Puedes continuar completando el formulario.</Alert>}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-      <Typography variant="h6">INFORMACION PERSONAL</Typography>
+      <Typography variant="h6">INFORMACIÓN DEL FUNDAISER</Typography>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
       <Grid2 item xs={6}>
-          <TextField
-            fullWidth
-            label="Código Fundraiser"
-            {...register("fundraiser_code", { required: true })}
-            error={!!errors.codigo_fundraiser}
-            helperText={errors.codigo_fundraiser && "Este campo es obligatorio"}
-          />
-        </Grid2>
-
-        {/* Campo de Nombre Fundraiser */}
-        <Grid2 item xs={6}>
-          <TextField
-            fullWidth
-            label="Nombre Fundraiser"
-            {...register("fundraiser_name", { required: true })}
-            error={!!errors.nombre_fundraiser}
-            helperText={errors.nombre_fundraiser && "Este campo es obligatorio"}
-          />
-        </Grid2>
-        
-
-       
+        <TextField
+          fullWidth
+          label="Código Fundraiser"
+          {...register("fundraiser_code", { required: true })}
+          error={!!errors.fundraiser_code}
+          helperText={errors.fundraiser_code && "Este campo es obligatorio"}
+        />
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Nombre Fundraiser"
+          {...register("fundraiser_name", { required: true })}
+          error={!!errors.fundraiser_name}
+          helperText={errors.fundraiser_name && "Este campo es obligatorio"}
+        />
+      </Grid2>
+    </Grid2>
+        <Typography variant="h6">INFORMACIÓN PERSONAL </Typography>
         {/* Nombre y Apellidos */}
         <Grid2 container spacing={3} sx={{ mb: 3 }}>
           <Grid2 item xs={6}>
@@ -234,29 +364,70 @@ export default function FormularioGoogleSheets() {
             </FormControl>
           </Grid2>
           <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Nº Identificación"
-              {...register('numero_identificacion', { required: true })}
-              error={!!errors.numero_identificacion || !!validationError}
-              helperText={
-                (errors.numero_identificacion && 'Este campo es obligatorio') ||
-                validationError
-              }
-              inputRef={numeroIdentificacionRef} // Asignar la referencia al campo de texto
-            />
-          </Grid2>
-          <Grid2 item xs={6}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={validarNumeroIdentificacion}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Validar'}
-            </Button>
-          </Grid2>
-        </Grid2>
+  <TextField
+    fullWidth
+    label="Nº Identificación"
+    {...register("numero_identificacion", {
+      required: "Este campo es obligatorio", // Mensaje de error si está vacío
+      validate: async (value) => {
+        // Validar solo si el tipo de identificación es "NIF"
+        if (watch("tipo_identificacion") === "NIF") {
+          try {
+            // Realizar la solicitud al backend
+            const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+              tipoid:'nif',
+              numero_identificacion: value, // Enviar el valor al backend
+            });
+
+            // Si la respuesta es exitosa, devolver true
+            if (response.data.valid) {
+              return true;
+            } else {
+              // Si el backend devuelve un error, mostrar el mensaje
+              return response.data.message || "Número de identificación inválido";
+            }
+          } catch (error) {
+            // Manejar errores de red o del servidor
+            console.error("Error al validar el número de identificación:", error);
+            return "Error al validar el número de identificación";
+          }
+        }
+        else if(watch("tipo_identificacion") === "NIE"){
+          try {
+            // Realizar la solicitud al backend
+            const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+              tipoid:'nie',
+              numero_identificacion: value, // Enviar el valor al backend
+            });
+
+            // Si la respuesta es exitosa, devolver true
+            if (response.data.valid) {
+              return true;
+            } else {
+              // Si el backend devuelve un error, mostrar el mensaje
+              return response.data.message || "Número de identificación inválido";
+            }
+          } catch (error) {
+            // Manejar errores de red o del servidor
+            console.error("Error al validar el número de identificación:", error);
+            return "Error al validar el número de identificación";
+          }
+
+
+        }
+        return true; // Si no es "NIF", no se valida
+      },
+    })}
+    error={!!errors.numero_identificacion} // Mostrar error si hay un problema
+    helperText={
+      errors.numero_identificacion
+        ? errors.numero_identificacion.message // Mostrar el mensaje de error
+        : "Este campo es obligatorio"
+    }
+  />
+</Grid2>
+    </Grid2>
+
 
 
         {/* Fecha de Nacimiento */}
@@ -283,12 +454,13 @@ export default function FormularioGoogleSheets() {
             />
           </Grid2>
         {/* Dirección */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
+        <Grid2 container spacing={8} sx={{ mb: 3 }}>
           
           <Grid2 item xs={6}>
             <TextField
               fullWidth
               label="CP*"
+              sx={{ marginTop:'29px'}}
               {...register("cp_direccion", { required: true })}
               error={!!errors.codigo_postal}
               helperText={errors.codigo_postal && "Este campo es obligatorio"}
@@ -298,6 +470,7 @@ export default function FormularioGoogleSheets() {
             <TextField
               fullWidth
               label="Población*"
+              sx={{ marginTop:'29px'}}
               {...register("ciudad_direccion", { required: true })}
               error={!!errors.ciudad}
               helperText={errors.ciudad && "Este campo es obligatorio"}
@@ -311,6 +484,7 @@ export default function FormularioGoogleSheets() {
           <TextField
             fullWidth
             label="Estado/Provincia"
+            sx={{ marginTop:'29px'}}
             {...register("estado_provincia", { required: true })}
             error={!!errors.estado_provincia}
             helperText={errors.estado_provincia && "Este campo es obligatorio"}
@@ -328,7 +502,7 @@ export default function FormularioGoogleSheets() {
               <RadioGroup {...field} row>
                 <FormControlLabel value="masculino" control={<Radio />} label="Masculino" />
                 <FormControlLabel value="femenino" control={<Radio />} label="Femenino" />
-                <FormControlLabel value="otro" control={<Radio />} label="Otro" />
+                
               </RadioGroup>
             )}
             {...register("genero", { required: true})}
@@ -343,25 +517,39 @@ export default function FormularioGoogleSheets() {
 
         {/* Recibe correspondencia */}
         <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={12}>
-            <Typography variant="h6">¿Quieres recibir información por correo?</Typography>
-            <RadioGroup row>
-              <FormControlLabel value="si" control={<Radio />} label="Sí" {...register("recibe_correspondencia", { required: true })} />
-              <FormControlLabel value="no" control={<Radio />} label="No" {...register("recibe_correspondencia", { required: true })} />
-            </RadioGroup>
-            {errors.recibe_correspondencia && <Typography color="error">Debes seleccionar una opción.</Typography>}
-          </Grid2>
-        </Grid2>
+      <Grid2 item xs={6}>
+        <Typography variant="h6">¿Quieres recibir información por correo?</Typography>
+        <RadioGroup row>
+          <FormControlLabel value="si" control={<Radio />} label="Sí" {...register("recibe_correspondencia", { required: true })} />
+          <FormControlLabel value="no" control={<Radio />} label="No" {...register("recibe_correspondencia", { required: true })} />
+        </RadioGroup>
+        {errors.recibe_correspondencia && (
+          <Typography color="error" variant="body2">
+            Debes seleccionar una opción.
+          </Typography>
+        )}
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Correo Electrónico"
+          {...register("correo_electronico", { required: true })}
+          error={!!errors.correo_electronico}
+          helperText={errors.correo_electronico && "Este campo es obligatorio"}
+        />
+      </Grid2>
+    </Grid2>
 
         {/* Móvil y Teléfono Casa */}
         <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Móvil"
-              {...register("movil", { required: false })}
-              error={!!errors.movil}
-            />
+        <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Móvil*"
+          {...register("movil", { required: true })}
+          error={!!errors.movil}
+          helperText={errors.movil && "Este campo es obligatorio"}
+        />
           </Grid2>
           <Grid2 item xs={6}>
             <TextField
@@ -375,26 +563,50 @@ export default function FormularioGoogleSheets() {
 
         {/* Correo Electrónico */}
         <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={12}>
-            <TextField
-              fullWidth
-              label="Correo Electrónico"
-              {...register("correo_electronico", { required: true })}
-              error={!!errors.correo}
-              helperText={errors.correo && "Este campo es obligatorio"}
-            />
-          </Grid2>
-        </Grid2>
+        
+    </Grid2>
         <Typography variant="h6">DATOS DE PAGO</Typography>
         <Grid2 item xs={12}>
-          <TextField
-            fullWidth
-            label="No IBAN"
-            {...register("no_iban", { required: true })}
-            error={!!errors.no_iban}
-            helperText={errors.no_iban && "Este campo es obligatorio"}
-          />
-        </Grid2>
+  <TextField
+    fullWidth
+    label="IBAN*"
+    {...register("no_iban", {
+      required: "Este campo es obligatorio", // Mensaje de error si está vacío
+      validate: async (value) => {
+        // Expresión regular para validar el formato básico del IBAN
+        const regex = /^ES[0-9]{22}$/;
+        if (!regex.test(value)) {
+          return "Formato incorrecto. El IBAN debe comenzar con 'ES' seguido de 22 dígitos (ejemplo: ES9121000418450200051332).";
+        }
+
+        try {
+          // Realizar la solicitud al backend para validar el IBAN
+          const response = await axios.post("http://localhost:8000/api/validar_iban/", {
+            iban: value, // Enviar el IBAN al backend
+          });
+
+          // Si la respuesta es exitosa, devolver true
+          if (response.data.valid) {
+            return true;
+          } else {
+            // Si el backend devuelve un error, mostrar el mensaje
+            return response.data.message || "IBAN inválido";
+          }
+        } catch (error) {
+          // Manejar errores de red o del servidor
+          console.error("Error al validar el IBAN:", error);
+          return "Error al validar el IBAN";
+        }
+      },
+    })}
+    error={!!errors.no_iban} // Mostrar error si hay un problema
+    helperText={
+      errors.no_iban
+        ? errors.no_iban.message // Mostrar el mensaje de error
+        : "Este campo es obligatorio"
+    }
+  />
+</Grid2>
 
         {/* Campo de Nombre Titular (en caso de que sea distinto) */}
         <Grid2 item xs={12}>
@@ -404,7 +616,7 @@ export default function FormularioGoogleSheets() {
             {...register("nombre_titular")}
           />
         </Grid2>
-        <Typography variant="h6">DATOS DE DONACION</Typography>
+        <Typography variant="h6">DATOS DE DONACIÓN</Typography>
         {/* Descripción y Periodicidad */}
         <Grid2 container spacing={10} sx={{ mb: 3 }}>
          
@@ -417,7 +629,7 @@ export default function FormularioGoogleSheets() {
         {...register("importe", { required: true })}
         error={!!errors.importe}
       >
-        <MenuItem value="10€">10€</MenuItem>
+       
         <MenuItem value="20€">20€</MenuItem>
         <MenuItem value="30€">30€</MenuItem>
         <MenuItem value="50€">50€</MenuItem>
@@ -455,22 +667,7 @@ export default function FormularioGoogleSheets() {
               <MenuItem value="Anual">Anual</MenuItem>
             </TextField>
           </Grid2>
-        </Grid2>
-
-        {/* Fecha Primer Pago y Día Presentación */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Fecha Primer Pago"
-              type="date"
-              InputLabelProps={{ shrink: true }}
-              {...register("fecha_primer_pago", { required: true })}
-              error={!!errors.fecha_primer_pago}
-              helperText={errors.fecha_primer_pago && "Este campo es obligatorio"}
-            />
-          </Grid2>
-          <Grid2 size={{ xs: 12, sm: 3 }}>
+           <Grid2 size={{ xs: 12, sm: 3 }}>
   <FormControl fullWidth>
     <InputLabel>Día Presentación</InputLabel>
     <Select
@@ -491,6 +688,7 @@ export default function FormularioGoogleSheets() {
 </Grid2>
         </Grid2>
 
+       
 
         
         <Grid2 item xs={12}>
@@ -640,19 +838,26 @@ export default function FormularioGoogleSheets() {
         {/* Botones de Envío y Guardar Borrador */}
         <Grid2 container spacing={3} sx={{ mb: 3 }}>
           <Grid2 item xs={6}>
-            <Button
-              type="button"
-              variant="contained"
-              color="secondary"
-              fullWidth
-              onClick={handleSubmit(saveDraft)} // Guardar borrador
-            >
-              Guardar Borrador
-            </Button>
+          <Button
+            type="button"
+            variant="contained"
+            color="secondary"
+            fullWidth
+            onClick={() => saveDraft(getValues())} // Envía los datos sin validar
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Guardar Borrador"}
+          </Button>
           </Grid2>
           <Grid2 item xs={6}>
-            <Button type="submit" variant="contained" color="primary" fullWidth>
-              Continuar
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : "Continuar"}
             </Button>
           </Grid2>
         </Grid2>

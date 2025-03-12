@@ -1,69 +1,55 @@
 .footer {
-    background: #2a5298;
-    color: white;
-    padding: 40px 20px;
-    text-align: center;
-  }
-  
-  .container {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .column {
-    flex: 1;
-    min-width: 200px;
-  }
-  
-  .logo {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-  
-  .description {
-    font-size: 14px;
-    color: #ddd;
-  }
-  
-  /* Usa una clase en lugar de la etiqueta h4 */
-  .columnTitle {
-    font-size: 18px;
-    margin-bottom: 10px;
-  }
-  
-  .columnList {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .columnList li {
-    margin-bottom: 8px;
-  }
-  
-  .columnList a {
-    color: white;
-    text-decoration: none;
-  }
-  
-  .socialIcons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-  }
-  
-  .socialIcons a {
-    color: white;
-    text-decoration: none;
-    font-size: 24px;
-  }
-  
-  .copyright {
-    margin-top: 20px;
-    font-size: 12px;
-    color: #ddd;
-  }
+  background-color: #f5f5dc; /* Fondo beige claro */
+  padding: 40px 0; /* Más padding para mayor espacio */
+  text-align: center;
+  border-top: 1px solid #e0e0e0; /* Línea superior sutil */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: center; /* Centra las columnas horizontalmente */
+  align-items: center; /* Centra las columnas verticalmente */
+  gap: 40px; /* Espacio entre las columnas */
+}
+
+.column {
+  margin-bottom: 20px;
+}
+
+/* Estilos para el logo */
+.logoContainer {
+  text-align: center;
+}
+
+.logo {
+  max-width: 150px; /* Tamaño del logo */
+  height: auto;
+}
+
+.columnTitle {
+  font-size: 24px; /* Tamaño de fuente más grande */
+  margin-bottom: 15px;
+  color: #333; /* Color de texto oscuro */
+  font-weight: 600; /* Texto en negrita */
+}
+
+.description {
+  font-size: 18px; /* Tamaño de fuente más grande */
+  color: #555; /* Color de texto gris oscuro */
+}
+
+.description a {
+  color: #333; /* Color azul para el enlace */
+  text-decoration: none;
+  font-weight: 500; /* Texto seminegrita */
+}
+
+
+.copyright {
+  font-size: 14px; /* Tamaño de fuente más grande */
+  color: #777; /* Color de texto gris */
+  margin-top: 30px; /* Más margen superior */
+}

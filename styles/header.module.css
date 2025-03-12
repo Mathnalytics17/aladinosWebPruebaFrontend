@@ -1,57 +1,25 @@
 .header {
-    background: linear-gradient(90deg, #1e3c72, #2a5298);
-    color: white;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .logo {
-    font-size: 24px;
-    font-weight: bold;
-  }
-  
-  .nav {
-    display: flex;
-    gap: 20px;
-  }
-  
-  .nav a {
-    color: white;
-    text-decoration: none;
-    font-size: 16px;
-    transition: color 0.3s ease;
-  }
-  
-  .nav a:hover {
-    color: #ffdd57;
-  }
-  
-  .menuIcon {
-    display: none;
-    font-size: 24px;
-    cursor: pointer;
-  }
-  
-  @media (max-width: 768px) {
-    .nav {
-      display: none;
-      flex-direction: column;
-      background: #1e3c72;
-      position: absolute;
-      top: 60px;
-      right: 20px;
-      padding: 10px;
-      border-radius: 5px;
-    }
-  
-    .nav.active {
-      display: flex;
-    }
-  
-    .menuIcon {
-      display: block;
-    }
-  }
+  display: flex;
+  justify-content: center; /* Centra el contenido horizontalmente */
+  align-items: center; /* Centra el contenido verticalmente */
+  padding: 10px 0; /* Añade un poco de padding vertical */
+  background-color: #ffffff; /* Color de fondo del header */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra más pronunciada */
+  border-radius: 20px; /* Bordes redondeados */
+  width: 95%; /* Ancho reducido para que no ocupe toda la pantalla */
+  max-width: 1700px; /* Ancho máximo para evitar que se vea demasiado ancho en pantallas grandes */
+  margin: 20px auto; /* Centra el header horizontalmente y añade margen superior e inferior */
+
+  top: 10px; /* Opcional: Ajusta la posición del header pegajoso */
+  z-index: 1000; /* Opcional: Asegura que el header esté por encima de otros elementos */
+}
+
+.logoContainer {
+  text-align: center; /* Centra el logo dentro del contenedor */
+}
+
+/* Estilos adicionales para el logo si es necesario */
+.logoContainer img {
+  max-width: 100%;
+  height: auto;
+}

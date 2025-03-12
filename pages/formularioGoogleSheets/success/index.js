@@ -1,17 +1,35 @@
-// pages/exito.js
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Exito() {
   return (
     <div style={styles.container}>
+      {/* Imagen */}
+      <div style={styles.imageContainer}>
+        <Image
+          src="/2304-fundacion-aladiina.jpg"
+          alt="Fundación Aladina"
+          width={600} // Ancho de la imagen
+          height={400} // Alto de la imagen
+          style={styles.image}
+        />
+      </div>
+
+      {/* Mensaje de éxito */}
       <h1 style={styles.title}>¡Formulario enviado con éxito!</h1>
-      <p style={styles.message}>Gracias por completar el formulario. Tu información ha sido recibida correctamente.</p>
+      <p style={styles.message}>
+        Gracias por completar el formulario. Tu información ha sido recibida correctamente.
+      </p>
+
+      {/* Botón para volver al inicio */}
       <Link href="/home" style={styles.link}>
         Volver al inicio
       </Link>
     </div>
   );
 }
+
+// Estilos
 const styles = {
   container: {
     display: 'flex',
@@ -20,9 +38,16 @@ const styles = {
     justifyContent: 'center',
     minHeight: '100vh',
     textAlign: 'center',
-    backgroundColor: '#f8f9fa', // Fondo más suave y moderno
+    backgroundColor: '#f5f5dc', // Fondo beige claro
     padding: '40px 20px',
     fontFamily: '"Roboto", sans-serif', // Fuente moderna
+  },
+  imageContainer: {
+    marginBottom: '40px', // Espacio debajo de la imagen
+  },
+  image: {
+    borderRadius: '12px', // Bordes redondeados para la imagen
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // Sombra suave
   },
   title: {
     fontSize: '2.5rem',
@@ -45,8 +70,5 @@ const styles = {
     fontSize: '1rem',
     fontWeight: '500',
     transition: 'background-color 0.3s ease', // Efecto hover suave
-    ':hover': {
-      backgroundColor: '#2980b9', // Azul más oscuro al pasar el mouse
-    },
   },
 };

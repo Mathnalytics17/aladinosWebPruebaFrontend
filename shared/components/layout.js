@@ -23,7 +23,7 @@ const Layout = ({ children }) => {
   ].includes(router.pathname);
 
   return (
-    <Grid2 container sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <Grid2 container sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" ,backgroundColor: "#F5F5DC"}}>
       {/* Header */}
       <Header />
 
