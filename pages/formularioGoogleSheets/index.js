@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
+        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -152,7 +152,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
+      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -280,7 +280,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
+      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -392,7 +392,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -413,7 +413,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -472,6 +472,7 @@ export default function FormularioGoogleSheets() {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
+          sx={{ minWidth: "480px" }}
           label="Dirección completa (calle, no, escalera, piso, puerta...)*"
           {...register("via_principal", { required: true })}
           error={!!errors.via_principal}
@@ -586,6 +587,7 @@ export default function FormularioGoogleSheets() {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
+          sx={{ minWidth: "480px" }}
           label="IBAN*"
           {...register("no_iban", {
             required: "Este campo es obligatorio", // Mensaje de error si está vacío
@@ -598,7 +600,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
+                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
