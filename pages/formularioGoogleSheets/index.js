@@ -8,6 +8,7 @@ import {
   Typography,
   TextField,
   Radio,
+  Box,
   RadioGroup,
   FormControlLabel,
   Button,
@@ -95,6 +96,16 @@ export default function FormularioGoogleSheets() {
     }
   }, [setValue]);
 
+
+  const obtenerFechaFormateada = () => {
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0'); // Día con dos dígitos
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0'); // Mes con dos dígitos
+    const año = hoy.getFullYear(); // Año con cuatro dígitos
+    return `${dia}/${mes}/${año}`; // Formato DD/MM/YYYY
+  };
+
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
@@ -102,20 +113,24 @@ export default function FormularioGoogleSheets() {
       if (typeof data.fecha_nacimiento === "string") {
         data.fecha_nacimiento = new Date(data.fecha_nacimiento);
       }
-     
+      const fechaFormateadahoy = obtenerFechaFormateada();
+      console.log(fechaFormateadahoy);
+
       // Capturar las firmas como imágenes base64
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
       data.importe = data.importe == "otra_cantidad" ? "Otra Cantidad" : data.importe;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
+      
       const formattedData = {
         ...data,
+        
         firma_socio: firmaSocio, // Agregar firma del socio
         firma_captador: firmaCaptador, // Agregar firma del captador
         quiere_correspondencia: data.recibe_correspondencia,
         saludo: data.saludo,
-        
+        fecha_ingreso_dato:fechaFormateadahoy,
         fecha_nacimiento: data.fecha_nacimiento.toISOString().split("T")[0], // Formato YYYY-MM-DD
         primer_canal_captacion: "F2F Boost Impact (Madrid)",
         canal_entrada: "F2F",
@@ -137,7 +152,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -159,7 +174,7 @@ export default function FormularioGoogleSheets() {
         // Agrega más traducciones según sea necesario
       };
       Object.keys(error.response.data).forEach((key) => {
-        const messages = error.response.data[key].map((msg) => errorTranslations[msg] || msg); // Traducción o mensaje original
+        const messages = error?.response?.data[key]?.map((msg) => errorTranslations[msg] || msg); // Traducción o mensaje original
         toast.error(`${key}: ${messages.join(", ")}`);
       });
     } else {
@@ -172,6 +187,7 @@ export default function FormularioGoogleSheets() {
 
   const saveDraft = async (data) => {
     // Verificar que todos los campos obligatorios estén completos (excepto no_iban)
+    const fechaFormateadahoy = obtenerFechaFormateada();
     const camposObligatorios = [
       "nombre",
       "apellidos",
@@ -223,6 +239,7 @@ export default function FormularioGoogleSheets() {
     const draftData = {
       fundraiser_code:data.fundraiser_code,
       fundraiser_name:data.fundraiser_name,
+      fecha_ingreso_dato:fechaFormateadahoy,
       nombre: data.nombre,
       apellidos: data.apellidos,
       tipo_identificacion: data.tipo_identificacion,
@@ -263,7 +280,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -295,15 +312,15 @@ export default function FormularioGoogleSheets() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      
+    
+    <Container maxWidth="sm" sx={{ mt: 10, mb: 10, width: '100%', overflow: 'hidden' }}>
+   {error && <Alert severity="error">{error}</Alert>}
+  {success && <Alert severity="success">Registro enviado con éxito</Alert>}
+  {isDraft && <Alert severity="info">Tienes un borrador guardado. Puedes continuar completando el formulario.</Alert>}
 
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">Registro enviado con éxito</Alert>}
-      {isDraft && <Alert severity="info">Tienes un borrador guardado. Puedes continuar completando el formulario.</Alert>}
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-      <Typography variant="h6">INFORMACIÓN DEL FUNDAISER</Typography>
+  <form onSubmit={handleSubmit(onSubmit)}>
+    {/* Sección: Información del Fundraiser */}
+    <Typography variant="h6" gutterBottom>INFORMACIÓN DEL FUNDAISER</Typography>
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
       <Grid2 item xs={6}>
         <TextField
@@ -324,201 +341,200 @@ export default function FormularioGoogleSheets() {
         />
       </Grid2>
     </Grid2>
-        <Typography variant="h6">INFORMACIÓN PERSONAL </Typography>
-        {/* Nombre y Apellidos */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Nombre"
-              {...register("nombre", { required: true })}
-              error={!!errors.nombre}
-              helperText={errors.nombre && "Este campo es obligatorio"}
-            />
-          </Grid2>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Apellidos"
-              {...register("apellidos", { required: true })}
-              error={!!errors.apellidos}
-              helperText={errors.apellidos && "Este campo es obligatorio"}
-            />
-          </Grid2>
-        </Grid2>
 
-        {/* Tipo de Identificación */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Tipo de Identificación</InputLabel>
-              <Select
-                label="Tipo de Identificación"
-                {...register("tipo_identificacion", { required: true })}
-                error={!!errors.tipo_identificacion}
-              >
-                <MenuItem value="NIF">NIF</MenuItem>
-                <MenuItem value="NIE">NIE</MenuItem>
-                <MenuItem value="Pasaporte">Pasaporte</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid2>
-          <Grid2 item xs={6}>
-  <TextField
-    fullWidth
-    label="Nº Identificación"
-    {...register("numero_identificacion", {
-      required: "Este campo es obligatorio", // Mensaje de error si está vacío
-      validate: async (value) => {
-        // Validar solo si el tipo de identificación es "NIF"
-        if (watch("tipo_identificacion") === "NIF") {
-          try {
-            // Realizar la solicitud al backend
-            const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
-              tipoid:'nif',
-              numero_identificacion: value, // Enviar el valor al backend
-            });
-
-            // Si la respuesta es exitosa, devolver true
-            if (response.data.valid) {
-              return true;
-            } else {
-              // Si el backend devuelve un error, mostrar el mensaje
-              return response.data.message || "Número de identificación inválido";
-            }
-          } catch (error) {
-            // Manejar errores de red o del servidor
-            console.error("Error al validar el número de identificación:", error);
-            return "Error al validar el número de identificación";
-          }
-        }
-        else if(watch("tipo_identificacion") === "NIE"){
-          try {
-            // Realizar la solicitud al backend
-            const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
-              tipoid:'nie',
-              numero_identificacion: value, // Enviar el valor al backend
-            });
-
-            // Si la respuesta es exitosa, devolver true
-            if (response.data.valid) {
-              return true;
-            } else {
-              // Si el backend devuelve un error, mostrar el mensaje
-              return response.data.message || "Número de identificación inválido";
-            }
-          } catch (error) {
-            // Manejar errores de red o del servidor
-            console.error("Error al validar el número de identificación:", error);
-            return "Error al validar el número de identificación";
-          }
-
-
-        }
-        return true; // Si no es "NIF", no se valida
-      },
-    })}
-    error={!!errors.numero_identificacion} // Mostrar error si hay un problema
-    helperText={
-      errors.numero_identificacion
-        ? errors.numero_identificacion.message // Mostrar el mensaje de error
-        : "Este campo es obligatorio"
-    }
-  />
-</Grid2>
+    {/* Sección: Información Personal */}
+    <Typography variant="h6" gutterBottom>INFORMACIÓN PERSONAL</Typography>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Nombre"
+          {...register("nombre", { required: true })}
+          error={!!errors.nombre}
+          helperText={errors.nombre && "Este campo es obligatorio"}
+        />
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Apellidos"
+          {...register("apellidos", { required: true })}
+          error={!!errors.apellidos}
+          helperText={errors.apellidos && "Este campo es obligatorio"}
+        />
+      </Grid2>
     </Grid2>
 
-
-
-        {/* Fecha de Nacimiento */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-        <Grid2 item xs={12}>
-  <TextField
-    fullWidth
-    label="Fecha de Nacimiento"
-    type="date"
-    InputLabelProps={{ shrink: true }} // Asegura que el label no se superponga
-    {...register("fecha_nacimiento", { required: true })}
-    error={!!errors.fecha_nacimiento}
-    helperText={errors.fecha_nacimiento && "Este campo es obligatorio"}
-  />
-</Grid2>
-        </Grid2>
-        <Grid2 item xs={12}>
-            <TextField
-              fullWidth
-              label="Dirección completa (calle, no, escalera, piso, puerta...)*"
-              {...register("via_principal", { required: true })}
-              error={!!errors.via_principal}
-              helperText={errors.via_principal && "Este campo es obligatorio"}
-            />
-          </Grid2>
-        {/* Dirección */}
-        <Grid2 container spacing={8} sx={{ mb: 3 }}>
-          
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="CP*"
-              sx={{ marginTop:'29px'}}
-              {...register("cp_direccion", { required: true })}
-              error={!!errors.codigo_postal}
-              helperText={errors.codigo_postal && "Este campo es obligatorio"}
-            />
-          </Grid2>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Población*"
-              sx={{ marginTop:'29px'}}
-              {...register("ciudad_direccion", { required: true })}
-              error={!!errors.ciudad}
-              helperText={errors.ciudad && "Este campo es obligatorio"}
-            />
-          </Grid2>
-          
-          {/*Estado provincia */}
-
-              <Grid2 container spacing={3} sx={{ mb: 3 }}>
-        <Grid2 item xs={6}>
-          <TextField
-            fullWidth
-            label="Estado/Provincia"
-            sx={{ marginTop:'29px'}}
-            {...register("estado_provincia", { required: true })}
-            error={!!errors.estado_provincia}
-            helperText={errors.estado_provincia && "Este campo es obligatorio"}
-          />
-        </Grid2>
-      </Grid2>
-          <Grid2 item xs={12}>
-            Género
-          <Controller
-            name="genero"
-            control={control}
-            defaultValue=""
-            rules={{ required: true }}
-            render={({ field }) => (
-              <RadioGroup {...field} row>
-                <FormControlLabel value="masculino" control={<Radio />} label="Masculino" />
-                <FormControlLabel value="femenino" control={<Radio />} label="Femenino" />
-                
-              </RadioGroup>
-            )}
-            {...register("genero", { required: true})}
-          />
-          {errors.genero && (
-            <p style={{ color: "red", margin: "4px 0 0 14px", fontSize: "0.75rem" }}>
-              Este campo es obligatorio
-            </p>
-          )}
-        </Grid2>
-        </Grid2>
-
-        {/* Recibe correspondencia */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
+    {/* Tipo de Identificación */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
       <Grid2 item xs={6}>
-        <Typography variant="h6">¿Quieres recibir información por correo?</Typography>
+        <FormControl sx={{ minWidth: "230px" }}>
+          <InputLabel >Tipo de Identificación</InputLabel>
+          <Select
+            label="Tipo de Identificación"
+            {...register("tipo_identificacion", { required: true })}
+            error={!!errors.tipo_identificacion}
+          >
+            <MenuItem value="NIF">NIF</MenuItem>
+            <MenuItem value="NIE">NIE</MenuItem>
+            <MenuItem value="Pasaporte">Pasaporte</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Nº Identificación"
+          {...register("numero_identificacion", {
+            required: "Este campo es obligatorio", // Mensaje de error si está vacío
+            validate: async (value) => {
+              // Validar solo si el tipo de identificación es "NIF"
+              if (watch("tipo_identificacion") === "NIF") {
+                try {
+                  // Realizar la solicitud al backend
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                    tipoid:'nif',
+                    numero_identificacion: value, // Enviar el valor al backend
+                  });
+      
+                  // Si la respuesta es exitosa, devolver true
+                  if (response.data.valid) {
+                    return true;
+                  } else {
+                    // Si el backend devuelve un error, mostrar el mensaje
+                    return response.data.message || "Número de identificación inválido";
+                  }
+                } catch (error) {
+                  // Manejar errores de red o del servidor
+                  console.error("Error al validar el número de identificación:", error);
+                  return "Error al validar el número de identificación";
+                }
+              }
+              else if(watch("tipo_identificacion") === "NIE"){
+                try {
+                  // Realizar la solicitud al backend
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                    tipoid:'nie',
+                    numero_identificacion: value, // Enviar el valor al backend
+                  });
+      
+                  // Si la respuesta es exitosa, devolver true
+                  if (response.data.valid) {
+                    return true;
+                  } else {
+                    // Si el backend devuelve un error, mostrar el mensaje
+                    return response.data.message || "Número de identificación inválido";
+                  }
+                } catch (error) {
+                  // Manejar errores de red o del servidor
+                  console.error("Error al validar el número de identificación:", error);
+                  return "Error al validar el número de identificación";
+                }
+      
+      
+              }
+              return true; // Si no es "NIF", no se valida
+            },
+          })}
+          error={!!errors.numero_identificacion} // Mostrar error si hay un problema
+          helperText={
+            errors.numero_identificacion
+              ? errors.numero_identificacion.message === "The number has an invalid length."
+                ? "El número tiene una longitud inválida."
+                : errors.numero_identificacion.message === "The number's checksum or check digit is invalid."
+                ? "El dígito de control o checksum del número es inválido."
+                : errors.numero_identificacion.message === "The number has an invalid format."
+                ? "El número tiene un formato inválido."
+                : "Este campo es obligatorio"
+              : "Este campo es obligatorio"
+          }
+        />
+      </Grid2>
+    </Grid2>
+
+    {/* Fecha de Nacimiento */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <TextField
+          fullWidth
+          label="Fecha de Nacimiento"
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          {...register("fecha_nacimiento", { required: true })}
+          error={!!errors.fecha_nacimiento}
+          helperText={errors.fecha_nacimiento && "Este campo es obligatorio"}
+        />
+      </Grid2>
+    </Grid2>
+
+    {/* Dirección */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <TextField
+          fullWidth
+          label="Dirección completa (calle, no, escalera, piso, puerta...)*"
+          {...register("via_principal", { required: true })}
+          error={!!errors.via_principal}
+          helperText={errors.via_principal && "Este campo es obligatorio"}
+        />
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="CP*"
+          {...register("cp_direccion", { required: true })}
+          error={!!errors.cp_direccion}
+          helperText={errors.cp_direccion && "Este campo es obligatorio"}
+        />
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Población*"
+          {...register("ciudad_direccion", { required: true })}
+          error={!!errors.ciudad_direccion}
+          helperText={errors.ciudad_direccion && "Este campo es obligatorio"}
+        />
+      </Grid2>
+      <Grid2 item xs={12}>
+        <TextField
+          fullWidth
+          label="Estado/Provincia"
+          {...register("estado_provincia", { required: true })}
+          error={!!errors.estado_provincia}
+          helperText={errors.estado_provincia && "Este campo es obligatorio"}
+        />
+      </Grid2>
+    </Grid2>
+
+    {/* Género */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <Typography variant="body1">Género</Typography>
+        <Controller
+          name="genero"
+          control={control}
+          defaultValue=""
+          rules={{ required: true }}
+          render={({ field }) => (
+            <RadioGroup {...field} row>
+              <FormControlLabel value="masculino" control={<Radio />} label="Masculino" />
+              <FormControlLabel value="femenino" control={<Radio />} label="Femenino" />
+            </RadioGroup>
+          )}
+        />
+        {errors.genero && (
+          <Typography color="error" variant="body2">
+            Este campo es obligatorio
+          </Typography>
+        )}
+      </Grid2>
+    </Grid2>
+
+    {/* Recibe correspondencia */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <Typography variant="body1">¿Quieres recibir correspondencia por correo?</Typography>
         <RadioGroup row>
           <FormControlLabel value="si" control={<Radio />} label="Sí" {...register("recibe_correspondencia", { required: true })} />
           <FormControlLabel value="no" control={<Radio />} label="No" {...register("recibe_correspondencia", { required: true })} />
@@ -529,20 +545,24 @@ export default function FormularioGoogleSheets() {
           </Typography>
         )}
       </Grid2>
-      <Grid2 item xs={6}>
+    </Grid2>
+
+    {/* Correo Electrónico */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
         <TextField
           fullWidth
-          label="Correo Electrónico"
+          label="email"
           {...register("correo_electronico", { required: true })}
           error={!!errors.correo_electronico}
           helperText={errors.correo_electronico && "Este campo es obligatorio"}
-        />
+          sx={{ minWidth: "482px" }} />
       </Grid2>
     </Grid2>
 
-        {/* Móvil y Teléfono Casa */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-        <Grid2 item xs={6}>
+    {/* Móvil y Teléfono Casa */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={6}>
         <TextField
           fullWidth
           label="Móvil*"
@@ -550,317 +570,327 @@ export default function FormularioGoogleSheets() {
           error={!!errors.movil}
           helperText={errors.movil && "Este campo es obligatorio"}
         />
-          </Grid2>
-          <Grid2 item xs={6}>
-            <TextField
-              fullWidth
-              label="Teléfono Casa"
-              {...register("telefono_casa", { required: false })}
-              error={!!errors.telefono_casa}
-            />
-          </Grid2>
-        </Grid2>
-
-        {/* Correo Electrónico */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-        
+      </Grid2>
+      <Grid2 item xs={6}>
+        <TextField
+          fullWidth
+          label="Otro Teléfono"
+          {...register("telefono_casa")}
+        />
+      </Grid2>
     </Grid2>
-        <Typography variant="h6">DATOS DE PAGO</Typography>
-        <Grid2 item xs={12}>
-  <TextField
-    fullWidth
-    label="IBAN*"
-    {...register("no_iban", {
-      required: "Este campo es obligatorio", // Mensaje de error si está vacío
-      validate: async (value) => {
-        // Expresión regular para validar el formato básico del IBAN
-        const regex = /^ES[0-9]{22}$/;
-        if (!regex.test(value)) {
-          return "Formato incorrecto. El IBAN debe comenzar con 'ES' seguido de 22 dígitos (ejemplo: ES9121000418450200051332).";
-        }
 
-        try {
-          // Realizar la solicitud al backend para validar el IBAN
-          const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
-            iban: value, // Enviar el IBAN al backend
-          });
-
-          // Si la respuesta es exitosa, devolver true
-          if (response.data.valid) {
-            return true;
-          } else {
-            // Si el backend devuelve un error, mostrar el mensaje
-            return response.data.message || "IBAN inválido";
+    {/* Sección: Datos de Pago */}
+    <Typography variant="h6" gutterBottom>DATOS DE PAGO</Typography>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <TextField
+          fullWidth
+          label="IBAN*"
+          {...register("no_iban", {
+            required: "Este campo es obligatorio", // Mensaje de error si está vacío
+            validate: async (value) => {
+              // Expresión regular para validar el formato básico del IBAN
+              const regex = /^ES[0-9]{22}$/;
+              if (!regex.test(value)) {
+                return "Formato incorrecto. El IBAN debe comenzar con 'ES' seguido de 22 dígitos (ejemplo: ES9121000418450200051332).";
+              }
+      
+              try {
+                // Realizar la solicitud al backend para validar el IBAN
+                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
+                  iban: value, // Enviar el IBAN al backend
+                });
+      
+                // Si la respuesta es exitosa, devolver true
+                if (response.data.valid) {
+                  return true;
+                } else {
+                  // Si el backend devuelve un error, mostrar el mensaje
+                  return response.data.message || "IBAN inválido";
+                }
+              } catch (error) {
+                // Manejar errores de red o del servidor
+                console.error("Error al validar el IBAN:", error);
+                return "Error al validar el IBAN";
+              }
+            },
+          })}
+          
+          error={!!errors.no_iban}
+          helperText={
+            errors.no_iban
+              ? errors.no_iban.message || "Este campo es obligatorio"
+              : "Este campo es obligatorio"
           }
-        } catch (error) {
-          // Manejar errores de red o del servidor
-          console.error("Error al validar el IBAN:", error);
-          return "Error al validar el IBAN";
-        }
-      },
-    })}
-    error={!!errors.no_iban} // Mostrar error si hay un problema
-    helperText={
-      errors.no_iban
-        ? errors.no_iban.message // Mostrar el mensaje de error
-        : "Este campo es obligatorio"
-    }
-  />
-</Grid2>
+        />
+      </Grid2>
+      <Grid2 item xs={12}>
+        <TextField
+          fullWidth
+          label="Nombre Titular (en caso de que sea distinto)"
+          {...register("nombre_titular")}
+          
+        />
+      </Grid2>
+    </Grid2>
 
-        {/* Campo de Nombre Titular (en caso de que sea distinto) */}
-        <Grid2 item xs={12}>
+    {/* Sección: Datos de Donación */}
+    <Typography variant="h6" gutterBottom>DATOS DE DONACIÓN</Typography>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={6}>
+        <FormControl  sx={{ minWidth: "230px" }}>
+          <InputLabel>Importe</InputLabel>
+          <Select
+            label="Importe"
+            {...register("importe", { required: true })}
+            error={!!errors.importe}
+          >
+            <MenuItem value="20€">20€</MenuItem>
+            <MenuItem value="30€">30€</MenuItem>
+            <MenuItem value="50€">50€</MenuItem>
+            <MenuItem value="otra_cantidad">Otra Cantidad</MenuItem>
+          </Select>
+        </FormControl>
+        {errors.importe && (
+          <Typography color="error" variant="body2">
+            Debes seleccionar un importe.
+          </Typography>
+        )}
+      </Grid2>
+      {watch("importe") === "otra_cantidad" && (
+        <Grid2 item xs={6}>
           <TextField
             fullWidth
-            label="Nombre Titular (en caso de que sea distinto)"
-            {...register("nombre_titular")}
+            label="Especifica la cantidad"
+            {...register("otra_cantidad", { required: true })}
+            error={!!errors.otra_cantidad}
+            helperText={errors.otra_cantidad && "Debes especificar la cantidad."}
           />
         </Grid2>
-        <Typography variant="h6">DATOS DE DONACIÓN</Typography>
-        {/* Descripción y Periodicidad */}
-        <Grid2 container spacing={10} sx={{ mb: 3 }}>
-         
-
-        <Grid2 item size={{ xs: 12, sm: 3 }}>
-    <FormControl fullWidth>
-      <InputLabel>Importe</InputLabel>
-      <Select
-        label="Importe"
-        {...register("importe", { required: true })}
-        error={!!errors.importe}
-      >
-       
-        <MenuItem value="20€">20€</MenuItem>
-        <MenuItem value="30€">30€</MenuItem>
-        <MenuItem value="50€">50€</MenuItem>
-        <MenuItem value="otra_cantidad">Otra Cantidad</MenuItem>
-      </Select>
-    </FormControl>
-    {errors.importe && (
-      <Typography color="error">Debes seleccionar un importe.</Typography>
-    )}
-  </Grid2>
-  {/* Campo para ingresar otra cantidad */}
-  {watch("importe") === "otra_cantidad" && (
-    <Grid2 size={{ xs: 12, sm: 3 }}>
-      <TextField
-        fullWidth
-        label="Especifica la cantidad"
-        {...register("otra_cantidad", { required: true })}
-        error={!!errors.otra_cantidad}
-        helperText={errors.otra_cantidad && "Debes especificar la cantidad."}
-      />
+      )}
+      <Grid2 item xs={6}>
+        <TextField
+          select
+          fullWidth
+          label="Periodicidad"
+          {...register("periodicidad", { required: true })}
+          error={!!errors.periodicidad}
+          helperText={errors.periodicidad && "Este campo es obligatorio"}
+           sx={{ minWidth: "230px" }}
+        >
+          <MenuItem value="Mensual">Mensual</MenuItem>
+          <MenuItem value="Trimestral">Trimestral</MenuItem>
+          <MenuItem value="Semestral">Semestral</MenuItem>
+          <MenuItem value="Anual">Anual</MenuItem>
+        </TextField>
+      </Grid2>
+      <Grid2 item xs={6}>
+        <FormControl  sx={{ minWidth: "482px" }}>
+          <InputLabel>Día Presentación</InputLabel>
+          <Select
+            label="Día Presentación"
+            {...register("dia_presentacion", { required: true })}
+            error={!!errors.dia_presentacion}
+          >
+            <MenuItem value="Del 1 al 5">Del 1 al 5</MenuItem>
+            <MenuItem value="Del 11 al 15">Del 11 al 15</MenuItem>
+            <MenuItem value="Del 25 al 30">Del 25 al 30</MenuItem>
+          </Select>
+          {errors.dia_presentacion && (
+            <Typography color="error" variant="body2">
+              Este campo es obligatorio
+            </Typography>
+          )}
+        </FormControl>
+      </Grid2>
     </Grid2>
-  )}
-          <Grid2 size={{ xs: 5, sm: 3 }}>
-            <TextField
-              select
-              fullWidth
-              label="Periodicidad"
-              {...register("periodicidad", { required: true })}
-              error={!!errors.periodicidad}
-              helperText={errors.periodicidad && "Este campo es obligatorio"}
-            >
-              <MenuItem value="Mensual">Mensual</MenuItem>
-              <MenuItem value="Trimestral">Trimestral</MenuItem>
-              <MenuItem value="Semestral">Semestral</MenuItem>
-              <MenuItem value="Anual">Anual</MenuItem>
-            </TextField>
-          </Grid2>
-           <Grid2 size={{ xs: 12, sm: 3 }}>
-  <FormControl fullWidth>
-    <InputLabel>Día Presentación</InputLabel>
-    <Select
-      label="Día Presentación"
-      {...register("dia_presentacion", { required: true })}
-      error={!!errors.dia_presentacion}
-    >
-      <MenuItem value="Del 1 al 5">Del 1 al 5</MenuItem>
-      <MenuItem value="Del 11 al 15">Del 11 al 15</MenuItem>
-      <MenuItem value="Del 25 al 30">Del 25 al 30</MenuItem>
-    </Select>
-    {errors.dia_presentacion && (
+
+    {/* Sección: Control de Calidad */}
+    <Typography variant="h6" gutterBottom>CONTROL DE CALIDAD</Typography>
+    <Typography variant="body1" gutterBottom>
+      Para asegurarnos de que comprendes tu compromiso como socio, responde las siguientes preguntas:
+    </Typography>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12}>
+        <Typography variant="body1" gutterBottom>
+          ¿El captador de fondos te ha explicado que es una donación continua?
+        </Typography>
+        <Controller
+          name="explicacion_donacion_continua"
+          control={control}
+          defaultValue=""
+          rules={{ required: true }}
+          render={({ field }) => (
+            <RadioGroup {...field} row>
+              <FormControlLabel value="si" control={<Radio />} label="Sí" />
+              <FormControlLabel value="no" control={<Radio />} label="No" />
+            </RadioGroup>
+          )}
+        />
+        {errors.explicacion_donacion_continua && (
+          <Typography color="error" variant="body2">
+            Debes seleccionar una opción.
+          </Typography>
+        )}
+      </Grid2>
+      <Grid2 item xs={12}>
+        <Typography variant="body1" gutterBottom>
+          ¿El captador de fondos te ha explicado que éste no es un programa de una sola donación?
+        </Typography>
+        <Controller
+          name="explicacion_no_programa_unico"
+          control={control}
+          defaultValue=""
+          rules={{ required: true }}
+          render={({ field }) => (
+            <RadioGroup {...field} row>
+              <FormControlLabel value="si" control={<Radio />} label="Sí" />
+              <FormControlLabel value="no" control={<Radio />} label="No" />
+            </RadioGroup>
+          )}
+        />
+        {errors.explicacion_no_programa_unico && (
+          <Typography color="error" variant="body2">
+            Debes seleccionar una opción.
+          </Typography>
+        )}
+      </Grid2>
+    </Grid2>
+
+    {/* Sección: Firmas */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={6}>
+        <Typography variant="h6" gutterBottom>Firma del Socio</Typography>
+        <div style={{ border: "2px solid #000", borderRadius: "4px", padding: "10px" }}>
+          <SignatureCanvas
+            ref={signatureRefSocio}
+            canvasProps={{ width: 480, height: 200, className: "signature-canvas" }}
+          />
+        </div>
+        <Button variant="outlined" onClick={clearSignatureSocio} sx={{ mt: 2 }}>
+          Limpiar Firma
+        </Button>
+      </Grid2>
+      <Grid2 item xs={6}>
+        <Typography variant="h6" gutterBottom>Firma del Captador de Fondos</Typography>
+        <div style={{ border: "2px solid #000", borderRadius: "4px", padding: "10px" }}>
+          <SignatureCanvas
+            ref={signatureRefCaptador}
+            canvasProps={{ width: 480, height: 200, className: "signature-canvas" }}
+          />
+        </div>
+        <Button variant="outlined" onClick={clearSignatureCaptador} sx={{ mt: 2 }}>
+          Limpiar Firma
+        </Button>
+      </Grid2>
+    </Grid2>
+
+    {/* Aceptación de ser socio/a */}
+    <FormControlLabel
+      control={
+        <Checkbox
+          {...register("aceptacion_socio", { required: true })}
+        />
+      }
+      label="Sí, quiero ser socio/a de la Fundación Aladina"
+    />
+    {errors.aceptacion_socio && (
       <Typography color="error" variant="body2">
-        Este campo es obligatorio
+        Debes marcar esta casilla.
       </Typography>
     )}
-  </FormControl>
-</Grid2>
-        </Grid2>
 
-       
-
+    {/* Aceptación de política de privacidad */}
+    <FormControlLabel
+      control={
+        <Checkbox
+          {...register("aceptacion_politica_privacidad", { required: true })}
+        />
+      }
+      label={
+        <Typography variant="body2">
+          He leído y acepto la{" "}
+          
+            Política de privacidad
         
-        <Grid2 item xs={12}>
-  <Typography variant="h6" gutterBottom>
-    CONTROL DE CALIDAD
-  </Typography>
-  <Typography variant="body1" gutterBottom>
-    Para asegurarnos de que comprendes tu compromiso como socio, responde las siguientes preguntas:
-  </Typography>
-
-  {/* Pregunta 1 */}
-  <Typography variant="body1" gutterBottom>
-    ¿El captador de fondos te ha explicado que es una donación continua?
-  </Typography>
-  <Controller
-    name="explicacion_donacion_continua"
-    control={control}
-    defaultValue=""
-    rules={{ required: true }}
-    render={({ field }) => (
-      <RadioGroup {...field} row>
-        <FormControlLabel value="si" control={<Radio />} label="Sí" />
-        <FormControlLabel value="no" control={<Radio />} label="No" />
-      </RadioGroup>
-    )}
-  />
-  {errors.explicacion_donacion_continua && (
-    <Typography color="error" variant="body2">
-      Debes seleccionar una opción.
-    </Typography>
-  )}
-
-  {/* Pregunta 2 */}
-  <Typography variant="body1" gutterBottom>
-    ¿El captador de fondos te ha explicado que éste no es un programa de una sola donación?
-  </Typography>
-  <Controller
-    name="explicacion_no_programa_unico"
-    control={control}
-    defaultValue=""
-    rules={{ required: true }}
-    render={({ field }) => (
-      <RadioGroup {...field} row>
-        <FormControlLabel value="si" control={<Radio />} label="Sí" />
-        <FormControlLabel value="no" control={<Radio />} label="No" />
-      </RadioGroup>
-    )}
-  />
-  {errors.explicacion_no_programa_unico && (
-    <Typography color="error" variant="body2">
-      Debes seleccionar una opción.
-    </Typography>
-  )}
-
-  {/* Aceptación de ser socio/a */}
-  <FormControlLabel
-    control={
-      <Checkbox
-        {...register("aceptacion_socio", { required: true })}
-      />
-    }
-    label="Sí, quiero ser socio/a de la Fundación Aladina"
-  />
-  {errors.aceptacion_socio && (
-    <Typography color="error" variant="body2">
-      Debes marcar esta casilla.
-    </Typography>
-  )}
-
-  {/* Aceptación de política de privacidad */}
-  <FormControlLabel
-  control={
-    <Checkbox
-      {...register("aceptacion_politica_privacidad", { required: true })}
+        </Typography>
+      }
     />
-  }
-  label={
-    <Typography variant="body2">
-      He leído y acepto la{" "}
-      <Link href="/formularioGoogleSheets/policyPrivate" passHref>
-        Politica de privacidad
-      </Link>.
-    </Typography>
-  }
-/>
-{errors.aceptacion_politica_privacidad && (
-  <Typography color="error" variant="body2">
-    Debes aceptar la política de privacidad.
+    {errors.aceptacion_politica_privacidad && (
+      <Typography color="error" variant="body2">
+        Debes aceptar la política de privacidad.
+      </Typography>
+    )}
+
+    {/* Botones de Envío y Guardar Borrador */}
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={6}>
+        <Button
+          type="button"
+          variant="contained"
+          color="secondary"
+          fullWidth
+          onClick={() => saveDraft(getValues())}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} /> : "Guardar Borrador"}
+        </Button>
+      </Grid2>
+      <Grid2 item xs={6}>
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          fullWidth
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} /> : "Continuar"}
+        </Button>
+      </Grid2>
+    </Grid2>       <Box
+  sx={{
+    backgroundColor: "#f5f5f5",
+    padding: { xs: 2, sm: 3 },
+    borderRadius: 2,
+    boxShadow: 1,
+    maxWidth: "800px",
+    margin: "auto",
+  }}
+>
+  <Typography variant="body1" paragraph>
+    Gracias por ayudarnos a regalar sonrisas a los niños enfermos de cáncer y sus familias.
   </Typography>
-)}
-</Grid2>
 
-<Grid2 container spacing={3} sx={{ mb: 3 }}>
-  {/* Firma del Socio */}
-  <Grid2 item xs={6}>
-    <Typography variant="h6">Firma del Socio</Typography>
-    <div
-      style={{
-        border: "2px solid #000", // Borde negro de 2px
-        borderRadius: "4px", // Bordes redondeados
-        padding: "10px", // Espacio interno
-        width: "100%", // Ancho del contenedor
-        marginBottom: "10px", // Margen inferior
-      }}
-    >
-      <SignatureCanvas
-        ref={signatureRefSocio} // Referencia para la firma del socio
-        canvasProps={{
-          width: 480, // Ancho del canvas (ajustado para el padding)
-          height: 200,
-          className: "signature-canvas",
-        }}
-      />
-    </div>
-    <Button variant="outlined" onClick={clearSignatureSocio} sx={{ mt: 2 }}>
-      Limpiar Firma
-    </Button>
-  </Grid2>
+  <Typography variant="body2" paragraph>
+    Te informamos que tus datos personales serán incluidos en un fichero automatizado para su tratamiento, titularidad de la Fundación Aladina. La finalidad del tratamiento es la gestión administrativa de las donaciones recurrentes y puntuales, así como informarte de nuestras actividades, eventos y campañas solidarias.
+  </Typography>
 
-  {/* Firma del Captador de Fondos */}
-  <Grid2 item xs={6}>
-    <Typography variant="h6">Firma del Captador de Fondos</Typography>
-    <div
-      style={{
-        border: "2px solid #000", // Borde negro de 2px
-        borderRadius: "4px", // Bordes redondeados
-        padding: "10px", // Espacio interno
-        width: "100%", // Ancho del contenedor
-        marginBottom: "10px", // Margen inferior
-      }}
-    >
-      <SignatureCanvas
-        ref={signatureRefCaptador} // Referencia para la firma del captador
-        canvasProps={{
-          width: 480, // Ancho del canvas (ajustado para el padding)
-          height: 200,
-          className: "signature-canvas",
-        }}
-      />
-    </div>
-    <Button variant="outlined" onClick={clearSignatureCaptador} sx={{ mt: 2 }}>
-      Limpiar Firma
-    </Button>
-  </Grid2>
-</Grid2>
-        
-        {/* Botones de Envío y Guardar Borrador */}
-        <Grid2 container spacing={3} sx={{ mb: 3 }}>
-          <Grid2 item xs={6}>
-          <Button
-            type="button"
-            variant="contained"
-            color="secondary"
-            fullWidth
-            onClick={() => saveDraft(getValues())} // Envía los datos sin validar
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : "Guardar Borrador"}
-          </Button>
-          </Grid2>
-          <Grid2 item xs={6}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : "Continuar"}
-            </Button>
-          </Grid2>
-        </Grid2>
+  <Typography variant="body2" paragraph>
+    Puedes ejercer tus derechos de acceso, rectificación, supresión y, en su caso, de revocación del consentimiento prestado. Podrás ejercer estos derechos mediante una comunicación escrita dirigida a la Fundación Aladina, C/ Tomás Bretón 50-52 3ª planta Oficina 5, 28045 Madrid, o mediante un correo electrónico a{" "}
+    <Link href="mailto:socios@aladina.org" underline="hover">
+      socios@aladina.org
+    </Link>{" "}
+    adjuntando fotocopia de tu DNI o documento identificativo similar.
+  </Typography>
+
+  <Typography variant="body2" paragraph>
+    Además, tienes derecho a oponerte al tratamiento en cualquier momento, a través de los medios señalados en el apartado anterior, por motivos relacionados con tu situación particular en caso de que el tratamiento esté basado en nuestro interés legítimo. En el siguiente enlace puedes ampliar esta información:{" "}
+    <Link href="https://aladina.org/aviso-legal-y-politica-de-privacidad/" target="_blank" underline="hover">
+      Política de privacidad
+    </Link>.
+  </Typography>
+
+  <Box component="ul" sx={{ paddingLeft: 3 }}>
+    <Box component="li">
+      Me opongo al envío de comunicaciones sobre productos, actividades y campañas solidarias de la Fundación Aladina, por cualquier medio o soporte de comunicación (electrónico o físico).
+    </Box>
+    <Box component="li">
+      Consiento el envío de comunicaciones sobre productos, actividades y campañas solidarias de la Fundación Aladina en aquellos casos en los que no sea colaborador recurrente o puntual de Fundación Aladina, por cualquier medio o soporte de comunicación (electrónico o físico).
+    </Box>
+  </Box>
+</Box>
+
       </form>
     </Container>
   );
