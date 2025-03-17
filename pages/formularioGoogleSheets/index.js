@@ -281,7 +281,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
+      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
