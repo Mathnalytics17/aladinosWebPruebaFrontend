@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
+        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -152,7 +152,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
+      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
