@@ -115,14 +115,15 @@ export default function FormularioGoogleSheets() {
       }
       const fechaFormateadahoy = obtenerFechaFormateada();
       console.log(fechaFormateadahoy);
+      console.log(data.importe)
 
       // Capturar las firmas como imágenes base64
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-      data.importe = data.importe == "otra_cantidad" ? "Otra Cantidad" : data.importe;
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
-      
+      console.log(data.importe)
       const formattedData = {
         ...data,
         
@@ -139,7 +140,7 @@ export default function FormularioGoogleSheets() {
         tipo_pago: "CUOTA",
         concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
         tipo_relacion: "Socio",
-        importe: data.importe === "otra_cantidad" ? data.otra_cantidad : data.importe,
+        importe: data.importe,
         otra_cantidad: data.otra_cantidad || '',
         fecha_primer_pago: '',
         mandato: data.mandato || '',
@@ -152,7 +153,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -234,8 +235,8 @@ export default function FormularioGoogleSheets() {
     } else {
       fechaNacimiento = "";
     }
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
     console.log(data.importe)
-  
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
       fundraiser_code:data.fundraiser_code,
@@ -254,7 +255,7 @@ export default function FormularioGoogleSheets() {
       recibe_correspondencia: data.recibe_correspondencia,
       correo_electronico: data.correo_electronico,
       movil: data.movil,
-      importe: data.importe === "otra_cantidad" ? data.otra_cantidad : data.importe,
+      importe: data.importe,
       otra_cantidad: data.otra_cantidad || '',
       periodicidad: data.periodicidad,
       primer_canal_captacion: "F2F Boost Impact (Madrid)",
@@ -281,7 +282,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -393,7 +394,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -414,7 +415,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -601,7 +602,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
