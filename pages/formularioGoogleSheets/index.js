@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
+        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -393,7 +393,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -414,7 +414,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -601,7 +601,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
+                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
