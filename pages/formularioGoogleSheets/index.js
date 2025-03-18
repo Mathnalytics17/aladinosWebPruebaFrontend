@@ -109,13 +109,12 @@ export default function FormularioGoogleSheets() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      // Convertir fecha_nacimiento a objeto Date si es una cadena
       if (typeof data.fecha_nacimiento === "string") {
         // Dividir la cadena en día, mes y año
         const [day, month, year] = data.fecha_nacimiento.split("/");
       
-        // Crear el objeto Date (los meses en JavaScript son base 0, por eso restamos 1 al mes)
-        data.fecha_nacimiento = new Date(year, month - 1, day);
+        // Crear el objeto Date en horario UTC
+        data.fecha_nacimiento = new Date(Date.UTC(year, month - 1, day));
       
         // Verificar si la fecha es válida
         if (isNaN(data.fecha_nacimiento.getTime())) {
