@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
+        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -129,9 +129,10 @@ export default function FormularioGoogleSheets() {
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +"€": data.importe ;
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + "€" : data.importe;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
       console.log(data.importe)
+     
       const formattedData = {
         ...data,
         
@@ -161,7 +162,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -226,45 +227,52 @@ export default function FormularioGoogleSheets() {
       }
     }
   
-    const formatDateToDDMMYYYY = (date) => {
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return ""; // Devuelve una cadena vacía si la fecha no es válida
-      }
-      const day = String(date.getUTCDate()).padStart(2, "0"); // Usar getUTCDate() en lugar de getDate()
-      const month = String(date.getUTCMonth() + 1).padStart(2, "0"); // Usar getUTCMonth() en lugar de getMonth()
-      const year = date.getUTCFullYear(); // Usar getUTCFullYear() en lugar de getFullYear()
-      return `${day}/${month}/${year}`;
-    };
-    
-    // Convertir la cadena a objeto Date si es necesario
-    const parseDateFromString = (dateString) => {
-      if (typeof dateString === "string") {
-        // Si la cadena está en formato dd/mm/yyyy, convertirla a yyyy-mm-dd
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-          const [day, month, year] = dateString.split("/");
-          return new Date(Date.UTC(year, month - 1, day)); // Crear la fecha en horario UTC
-        }
-        // Si la cadena ya está en un formato que new Date() puede interpretar (por ejemplo, yyyy-mm-dd)
-        return new Date(dateString);
-      }
-      return null;
-    };
-    
-    // Procesar la fecha de nacimiento
-    let fechaNacimiento;
-    if (data.fecha_nacimiento instanceof Date) {
-      fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
-    } else if (typeof data.fecha_nacimiento === "string") {
-      const dateObj = parseDateFromString(data.fecha_nacimiento);
-      fechaNacimiento = formatDateToDDMMYYYY(dateObj);
-    } else {
-      fechaNacimiento = "";
+    // Formatear la fecha de nacimiento
+    // Función para formatear la fecha a dd/mm/yyyy
+const formatDateToDDMMYYYY = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    return ""; // Devuelve una cadena vacía si la fecha no es válida
+  }
+  const day = String(date.getUTCDate()).padStart(2, "0"); // Usar getUTCDate() en lugar de getDate()
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0"); // Usar getUTCMonth() en lugar de getMonth()
+  const year = date.getUTCFullYear(); // Usar getUTCFullYear() en lugar de getFullYear()
+  return `${day}/${month}/${year}`;
+};
+
+// Convertir la cadena a objeto Date si es necesario
+const parseDateFromString = (dateString) => {
+  if (typeof dateString === "string") {
+    // Si la cadena está en formato dd/mm/yyyy, convertirla a yyyy-mm-dd
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split("/");
+      return new Date(Date.UTC(year, month - 1, day)); // Crear la fecha en horario UTC
     }
-    
-    console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es válida
-       
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +"€": data.importe;
+    // Si la cadena ya está en un formato que new Date() puede interpretar (por ejemplo, yyyy-mm-dd)
+    return new Date(dateString);
+  }
+  return null;
+};
+
+// Procesar la fecha de nacimiento
+let fechaNacimiento;
+if (data.fecha_nacimiento instanceof Date) {
+  fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
+} else if (typeof data.fecha_nacimiento === "string") {
+  const dateObj = parseDateFromString(data.fecha_nacimiento);
+  fechaNacimiento = formatDateToDDMMYYYY(dateObj);
+} else {
+  fechaNacimiento = "";
+}
+
+console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es válida
+   
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + "€" : data.importe;
     console.log(data.importe)
+    data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
+    data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
+    console.log(data.saludo)
+    console.log(data)
+
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
       fundraiser_code:data.fundraiser_code,
@@ -311,7 +319,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -429,7 +437,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -450,7 +458,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -490,8 +498,7 @@ export default function FormularioGoogleSheets() {
     </Grid2>
 
     {/* Fecha de Nacimiento */}
-    <Grid2 container spacing={3} sx={{ mb: 3 }}>
-    <Grid2 item xs={12}>
+   <Grid2 item xs={12}>
   <TextField
     fullWidth
     sx={{ minWidth: "480px" }}
@@ -506,7 +513,7 @@ export default function FormularioGoogleSheets() {
         message: "El formato debe ser dd/mm/yyyy",
       },
     })}
-    error={!!errors.fecha_nacimiento}
+    error={!!errors.fecha_nacimiento} // Estado de error
     helperText={
       errors.fecha_nacimiento &&
       (errors.fecha_nacimiento.type === "required"
@@ -521,13 +528,12 @@ export default function FormularioGoogleSheets() {
     InputProps={{
       sx: {
         "&::placeholder": {
-          color: "black", // Color del placeholder
+          color: errors.fecha_nacimiento ? "red" : "black", // Placeholder rojo si hay error, negro si no
           opacity: 1, // Asegura que el placeholder sea completamente visible
         },
       },
     }}
   />
-</Grid2>
 </Grid2>
 
     {/* Dirección */}
@@ -686,7 +692,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
