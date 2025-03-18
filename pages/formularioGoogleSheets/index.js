@@ -652,6 +652,7 @@ export default function FormularioGoogleSheets() {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
+          sx={{ minWidth: "495px" }}
           label="Nombre Titular (en caso de que sea distinto)"
           {...register("nombre_titular")}
           
