@@ -509,7 +509,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           sx={{ minWidth: "480px" }}
-          label="Dirección completa (calle, no, escalera, piso, puerta...)*"
+          label="Dirección completa (calle, número, escalera, piso, puerta...)*"
           autoComplete="off"
           {...register("via_principal", { required: true })}
           error={!!errors.via_principal}
