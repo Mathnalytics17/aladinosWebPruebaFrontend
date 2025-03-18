@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
+        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
