@@ -153,7 +153,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post("http://localhost:8000/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -218,13 +218,27 @@ export default function FormularioGoogleSheets() {
       }
     }
   
-    // Formatear la fecha de nacimiento
-    const formatDateToDDMMYYYY = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
+  // Función para validar y formatear la fecha
+const formatDateToDDMMYYYY = (dateString) => {
+  // Verifica que la fecha esté en el formato dd/mm/aaaa
+  const regex = /^\d{2}\/\d{2}\/\d{4}$/;
+  if (!regex.test(dateString)) {
+    throw new Error("Formato de fecha inválido. Use dd/mm/aaaa.");
+  }
+
+  // Convierte la fecha de dd/mm/aaaa a un formato válido para Date
+  const [day, month, year] = dateString.split("/");
+  const date = new Date(`${year}-${month}-${day}`);
+
+  // Verifica si la fecha es válida
+  if (isNaN(date.getTime())) {
+    throw new Error("Fecha inválida. Verifique el día, mes o año.");
+  }
+
+  // Devuelve la fecha formateada
+  return `${day}/${month}/${year}`;
+};
+
   
     let fechaNacimiento;
     if (data.fecha_nacimiento instanceof Date) {
@@ -282,7 +296,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch("http://localhost:8000/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -320,7 +334,7 @@ export default function FormularioGoogleSheets() {
   {success && <Alert severity="success">Registro enviado con éxito</Alert>}
   {isDraft && <Alert severity="info">Tienes un borrador guardado. Puedes continuar completando el formulario.</Alert>}
 
-  <form onSubmit={handleSubmit(onSubmit)}>
+  <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" >
     {/* Sección: Información del Fundraiser */}
     <Typography variant="h6" gutterBottom>INFORMACIÓN DEL FUNDAISER</Typography>
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
@@ -328,6 +342,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Código Fundraiser"
+          autoComplete="off"
           {...register("fundraiser_code", { required: true })}
           error={!!errors.fundraiser_code}
           helperText={errors.fundraiser_code && "Este campo es obligatorio"}
@@ -337,6 +352,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Nombre Fundraiser"
+          autoComplete="off"
           {...register("fundraiser_name", { required: true })}
           error={!!errors.fundraiser_name}
           helperText={errors.fundraiser_name && "Este campo es obligatorio"}
@@ -351,6 +367,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Nombre"
+          autoComplete="off"
           {...register("nombre", { required: true })}
           error={!!errors.nombre}
           helperText={errors.nombre && "Este campo es obligatorio"}
@@ -360,6 +377,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Apellidos"
+          autoComplete="off"
           {...register("apellidos", { required: true })}
           error={!!errors.apellidos}
           helperText={errors.apellidos && "Este campo es obligatorio"}
@@ -374,6 +392,7 @@ export default function FormularioGoogleSheets() {
           <InputLabel >Tipo de Identificación</InputLabel>
           <Select
             label="Tipo de Identificación"
+            autoComplete="off"
             {...register("tipo_identificacion", { required: true })}
             error={!!errors.tipo_identificacion}
           >
@@ -387,6 +406,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Nº Identificación"
+          autoComplete="off"
           {...register("numero_identificacion", {
             required: "Este campo es obligatorio", // Mensaje de error si está vacío
             validate: async (value) => {
@@ -394,7 +414,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -415,7 +435,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("http://localhost:8000/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -460,7 +480,8 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Fecha de Nacimiento"
-          type="date"
+          autoComplete="off"
+          
           InputLabelProps={{ shrink: true }}
           {...register("fecha_nacimiento", { required: true })}
           error={!!errors.fecha_nacimiento}
@@ -476,6 +497,7 @@ export default function FormularioGoogleSheets() {
           fullWidth
           sx={{ minWidth: "480px" }}
           label="Dirección completa (calle, no, escalera, piso, puerta...)*"
+          autoComplete="off"
           {...register("via_principal", { required: true })}
           error={!!errors.via_principal}
           helperText={errors.via_principal && "Este campo es obligatorio"}
@@ -485,6 +507,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="CP*"
+          autoComplete="off"
           {...register("cp_direccion", { required: true })}
           error={!!errors.cp_direccion}
           helperText={errors.cp_direccion && "Este campo es obligatorio"}
@@ -494,6 +517,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Población*"
+          autoComplete="off"
           {...register("ciudad_direccion", { required: true })}
           error={!!errors.ciudad_direccion}
           helperText={errors.ciudad_direccion && "Este campo es obligatorio"}
@@ -503,6 +527,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Estado/Provincia"
+          autoComplete="off"
           {...register("estado_provincia", { required: true })}
           error={!!errors.estado_provincia}
           helperText={errors.estado_provincia && "Este campo es obligatorio"}
@@ -556,7 +581,8 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="email"
-          {...register("correo_electronico", { required: true })}
+          autoComplete="off"
+          {...register("correo_electronico")}
           error={!!errors.correo_electronico}
           helperText={errors.correo_electronico && "Este campo es obligatorio"}
           sx={{ minWidth: "482px" }} />
@@ -569,6 +595,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Móvil*"
+          autoComplete="off"
           {...register("movil", { required: true })}
           error={!!errors.movil}
           helperText={errors.movil && "Este campo es obligatorio"}
@@ -578,6 +605,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           fullWidth
           label="Otro Teléfono"
+          autoComplete="off"
           {...register("telefono_casa")}
         />
       </Grid2>
@@ -589,8 +617,10 @@ export default function FormularioGoogleSheets() {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
+
           sx={{ minWidth: "500px" }}
           label="IBAN*"
+          autoComplete="off"
           {...register("no_iban", {
             required: "Este campo es obligatorio", // Mensaje de error si está vacío
             validate: async (value) => {
@@ -602,7 +632,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post("http://localhost:8000/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
@@ -666,6 +696,7 @@ export default function FormularioGoogleSheets() {
         <Grid2 item xs={6}>
           <TextField
             fullWidth
+            autoComplete="off"
             label="Especifica la cantidad"
             {...register("otra_cantidad", { required: true })}
             error={!!errors.otra_cantidad}
@@ -677,6 +708,7 @@ export default function FormularioGoogleSheets() {
         <TextField
           select
           fullWidth
+          autoComplete="off"
           label="Periodicidad"
           {...register("periodicidad", { required: true })}
           error={!!errors.periodicidad}
