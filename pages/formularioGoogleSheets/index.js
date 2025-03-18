@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
+        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -111,7 +111,23 @@ export default function FormularioGoogleSheets() {
     try {
       // Convertir fecha_nacimiento a objeto Date si es una cadena
       if (typeof data.fecha_nacimiento === "string") {
-        data.fecha_nacimiento = new Date(data.fecha_nacimiento);
+        // Formatear la fecha de nacimiento
+    const formatDateToDDMMYYYY = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+  
+    let fechaNacimiento;
+    if (data.fecha_nacimiento instanceof Date) {
+      fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
+    } else if (typeof data.fecha_nacimiento === "string") {
+      const dateObj = new Date(data.fecha_nacimiento);
+      fechaNacimiento = formatDateToDDMMYYYY(dateObj);
+    } else {
+      fechaNacimiento = "";
+    }
       }
       const fechaFormateadahoy = obtenerFechaFormateada();
       console.log(fechaFormateadahoy);
@@ -121,7 +137,7 @@ export default function FormularioGoogleSheets() {
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +" " + "€": data.importe ;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
       console.log(data.importe)
       const formattedData = {
@@ -235,7 +251,7 @@ export default function FormularioGoogleSheets() {
     } else {
       fechaNacimiento = "";
     }
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +" " + "€": data.importe;
     console.log(data.importe)
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
