@@ -464,19 +464,42 @@ export default function FormularioGoogleSheets() {
     {/* Fecha de Nacimiento */}
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
       <Grid2 item xs={12}>
-        <TextField
-          fullWidth
-          sx={{ minWidth: "480px" }}
-          label="Fecha de Nacimiento"
-          autoComplete="off"
-          type="date"
-          InputLabelProps={{ shrink: true }}
-          {...register("fecha_nacimiento", { required: true })}
-          error={!!errors.fecha_nacimiento}
-          helperText={errors.fecha_nacimiento && "Este campo es obligatorio"}
-        
-        />
-      </Grid2>
+      <TextField
+    fullWidth
+    sx={{ minWidth: "480px" }}
+    label="Fecha de Nacimiento"
+    autoComplete="off"
+    placeholder="dd/mm/yyyy" // Placeholder para indicar el formato
+    InputLabelProps={{ shrink: true }}
+    {...register("fecha_nacimiento", {
+      required: true,
+      pattern: {
+        value: /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/, // Expresión regular para validar el formato
+        message: "El formato debe ser dd/mm/yyyy",
+      },
+    })}
+    error={!!errors.fecha_nacimiento}
+    helperText={
+      errors.fecha_nacimiento &&
+      (errors.fecha_nacimiento.type === "required"
+        ? "Este campo es obligatorio"
+        : errors.fecha_nacimiento.message) // Mensaje de error personalizado
+    }
+    inputProps={{
+      style: {
+        color: "black", // Color del texto ingresado
+      },
+    }}
+    InputProps={{
+      sx: {
+        "&::placeholder": {
+          color: "black", // Color del placeholder
+          opacity: 1, // Asegura que el placeholder sea completamente visible
+        },
+      },
+    }}
+  />
+</Grid2>
     </Grid2>
 
 
@@ -494,15 +517,29 @@ export default function FormularioGoogleSheets() {
         />
       </Grid2>
       <Grid2 item xs={6}>
-        <TextField
-          fullWidth
-          label="CP*"
-          autoComplete="off"
-          {...register("cp_direccion", { required: true })}
-          error={!!errors.cp_direccion}
-          helperText={errors.cp_direccion && "Este campo es obligatorio"}
-        />
-      </Grid2>
+  <TextField
+    fullWidth
+    label="CP*"
+    autoComplete="off"
+    {...register("cp_direccion", {
+      required: true,
+      maxLength: 5,
+      pattern: /^[0-9]+$/, // Solo permite números
+    })}
+    error={!!errors.cp_direccion} // Activa el estado de error
+    helperText={
+      errors.cp_direccion &&
+      (errors.cp_direccion.type === "required"
+        ? "Este campo es obligatorio"
+        : errors.cp_direccion.type === "maxLength"
+        ? "Máximo 5 caracteres"
+        : "Solo se permiten números")
+    }
+    inputProps={{
+      maxLength: 5, // Limita físicamente la entrada a 5 caracteres
+    }}
+  />
+</Grid2>
       <Grid2 item xs={6}>
         <TextField
           fullWidth
