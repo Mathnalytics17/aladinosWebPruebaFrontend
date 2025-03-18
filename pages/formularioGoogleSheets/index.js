@@ -435,7 +435,7 @@ const formatDateToDDMMYYYY = (dateString) => {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/ionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
