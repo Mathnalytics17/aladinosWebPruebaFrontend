@@ -295,6 +295,8 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
       no_iban:data.no_iban,
       importe: data.importe,
       otra_cantidad: data.otra_cantidad || '',
+      
+      telefono_casa: data.telefono_casa || '',
       periodicidad: data.periodicidad,
       primer_canal_captacion: "F2F Boost Impact (Madrid)",
       canal_entrada: "F2F",
