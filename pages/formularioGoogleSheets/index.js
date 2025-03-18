@@ -111,23 +111,16 @@ export default function FormularioGoogleSheets() {
     try {
       // Convertir fecha_nacimiento a objeto Date si es una cadena
       if (typeof data.fecha_nacimiento === "string") {
-        // Formatear la fecha de nacimiento
-    const formatDateToDDMMYYYY = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
-  
-    let fechaNacimiento;
-    if (data.fecha_nacimiento instanceof Date) {
-      fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
-    } else if (typeof data.fecha_nacimiento === "string") {
-      const dateObj = new Date(data.fecha_nacimiento);
-      fechaNacimiento = formatDateToDDMMYYYY(dateObj);
-    } else {
-      fechaNacimiento = "";
-    }
+        // Dividir la cadena en día, mes y año
+        const [day, month, year] = data.fecha_nacimiento.split("/");
+      
+        // Crear el objeto Date (los meses en JavaScript son base 0, por eso restamos 1 al mes)
+        data.fecha_nacimiento = new Date(year, month - 1, day);
+      
+        // Verificar si la fecha es válida
+        if (isNaN(data.fecha_nacimiento.getTime())) {
+          throw new Error("Fecha de nacimiento no válida");
+        }
       }
       const fechaFormateadahoy = obtenerFechaFormateada();
       console.log(fechaFormateadahoy);
