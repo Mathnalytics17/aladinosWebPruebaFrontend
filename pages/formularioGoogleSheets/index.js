@@ -130,7 +130,7 @@ export default function FormularioGoogleSheets() {
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +" " + "€": data.importe ;
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +"€": data.importe ;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
       console.log(data.importe)
       const formattedData = {
@@ -145,8 +145,8 @@ export default function FormularioGoogleSheets() {
         primer_canal_captacion: "F2F Boost Impact (Madrid)",
         canal_entrada: "F2F",
         recibe_memoria: "SI",
-        medio_pago: "DOMICILIACIÓN",
-        tipo_pago: "CUOTA",
+        medio_pago: "Domiciliación",
+        tipo_pago: "Cuota",
         concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
         tipo_relacion: "Socio",
         importe: data.importe,
@@ -210,7 +210,7 @@ export default function FormularioGoogleSheets() {
       "estado_provincia","dia_presentacion",
       "genero",
       "recibe_correspondencia",
-      "correo_electronico",
+     
       "movil",
       "importe",
       "periodicidad",
@@ -227,30 +227,51 @@ export default function FormularioGoogleSheets() {
       }
     }
   
-    // Formatear la fecha de nacimiento
     const formatDateToDDMMYYYY = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return ""; // Devuelve una cadena vacía si la fecha no es válida
+      }
+      const day = String(date.getUTCDate()).padStart(2, "0"); // Usar getUTCDate() en lugar de getDate()
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0"); // Usar getUTCMonth() en lugar de getMonth()
+      const year = date.getUTCFullYear(); // Usar getUTCFullYear() en lugar de getFullYear()
       return `${day}/${month}/${year}`;
     };
-  
+    
+    // Convertir la cadena a objeto Date si es necesario
+    const parseDateFromString = (dateString) => {
+      if (typeof dateString === "string") {
+        // Si la cadena está en formato dd/mm/yyyy, convertirla a yyyy-mm-dd
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+          const [day, month, year] = dateString.split("/");
+          return new Date(Date.UTC(year, month - 1, day)); // Crear la fecha en horario UTC
+        }
+        // Si la cadena ya está en un formato que new Date() puede interpretar (por ejemplo, yyyy-mm-dd)
+        return new Date(dateString);
+      }
+      return null;
+    };
+    
+    // Procesar la fecha de nacimiento
     let fechaNacimiento;
     if (data.fecha_nacimiento instanceof Date) {
       fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
     } else if (typeof data.fecha_nacimiento === "string") {
-      const dateObj = new Date(data.fecha_nacimiento);
+      const dateObj = parseDateFromString(data.fecha_nacimiento);
       fechaNacimiento = formatDateToDDMMYYYY(dateObj);
     } else {
       fechaNacimiento = "";
     }
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +" " + "€": data.importe;
+    
+    console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es válida
+       
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad +"€": data.importe;
     console.log(data.importe)
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
       fundraiser_code:data.fundraiser_code,
       fundraiser_name:data.fundraiser_name,
       fecha_ingreso_dato:fechaFormateadahoy,
+      saludo: data.saludo,
       nombre: data.nombre,
       apellidos: data.apellidos,
       tipo_identificacion: data.tipo_identificacion,
