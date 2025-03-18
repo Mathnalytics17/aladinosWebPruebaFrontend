@@ -292,6 +292,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
       recibe_correspondencia: data.recibe_correspondencia,
       correo_electronico: data.correo_electronico,
       movil: data.movil,
+      no_iban:data.no_iban,
       importe: data.importe,
       otra_cantidad: data.otra_cantidad || '',
       periodicidad: data.periodicidad,
