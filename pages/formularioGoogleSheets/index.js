@@ -236,7 +236,7 @@ export default function FormularioGoogleSheets() {
     } else {
       fechaNacimiento = "";
     }
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + ' '+ "€" : data.importe;
     console.log(data.importe)
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
