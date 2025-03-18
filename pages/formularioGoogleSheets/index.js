@@ -59,7 +59,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
+        'http://82.112.250.23:1337/api/validar-dni/', // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -136,8 +136,8 @@ export default function FormularioGoogleSheets() {
         primer_canal_captacion: "F2F Boost Impact (Madrid)",
         canal_entrada: "F2F",
         recibe_memoria: "SI",
-        medio_pago: "Domiciliación",
-        tipo_pago: "Cuota",
+        medio_pago: "DOMICILIACIÓN",
+        tipo_pago: "CUOTA",
         concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
         tipo_relacion: "Socio",
         importe: data.importe,
@@ -153,7 +153,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post(https://api.altasfundacionaladina.org/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -218,14 +218,13 @@ export default function FormularioGoogleSheets() {
       }
     }
   
-  // Función para validar y formatear la fecha
-  const formatDateToDDMMYYYY = (date) => {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
+    // Formatear la fecha de nacimiento
+    const formatDateToDDMMYYYY = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
   
     let fechaNacimiento;
     if (data.fecha_nacimiento instanceof Date) {
@@ -236,7 +235,7 @@ export default function FormularioGoogleSheets() {
     } else {
       fechaNacimiento = "";
     }
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + ' '+ "€" : data.importe;
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
     console.log(data.importe)
     // Preparar los datos para enviar (excluyendo firma y campos de validación frontend)
     const draftData = {
@@ -283,7 +282,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch(https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -401,7 +400,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post(https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -422,7 +421,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post(https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -463,8 +462,8 @@ export default function FormularioGoogleSheets() {
 
     {/* Fecha de Nacimiento */}
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
-      <Grid2 item xs={12}>
-      <TextField
+    <Grid2 item xs={12}>
+  <TextField
     fullWidth
     sx={{ minWidth: "480px" }}
     label="Fecha de Nacimiento"
@@ -500,8 +499,7 @@ export default function FormularioGoogleSheets() {
     }}
   />
 </Grid2>
-    </Grid2>
-
+</Grid2>
 
     {/* Dirección */}
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
@@ -659,7 +657,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post(https://api.altasfundacionaladina.org/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
@@ -689,7 +687,7 @@ export default function FormularioGoogleSheets() {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
-          sx={{ minWidth: "495px" }}
+          sx={{ minWidth: "490px" }}
           label="Nombre Titular (en caso de que sea distinto)"
           {...register("nombre_titular")}
           
