@@ -219,25 +219,12 @@ export default function FormularioGoogleSheets() {
     }
   
   // Función para validar y formatear la fecha
-const formatDateToDDMMYYYY = (dateString) => {
-  // Verifica que la fecha esté en el formato dd/mm/aaaa
-  const regex = /^\d{2}\/\d{2}\/\d{4}$/;
-  if (!regex.test(dateString)) {
-    throw new Error("Formato de fecha inválido. Use dd/mm/aaaa.");
-  }
-
-  // Convierte la fecha de dd/mm/aaaa a un formato válido para Date
-  const [day, month, year] = dateString.split("/");
-  const date = new Date(`${year}-${month}-${day}`);
-
-  // Verifica si la fecha es válida
-  if (isNaN(date.getTime())) {
-    throw new Error("Fecha inválida. Verifique el día, mes o año.");
-  }
-
-  // Devuelve la fecha formateada
-  return `${day}/${month}/${year}`;
-};
+  const formatDateToDDMMYYYY = (date) => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   
     let fechaNacimiento;
@@ -479,16 +466,19 @@ const formatDateToDDMMYYYY = (dateString) => {
       <Grid2 item xs={12}>
         <TextField
           fullWidth
+          sx={{ minWidth: "480px" }}
           label="Fecha de Nacimiento"
           autoComplete="off"
-          
+          type="date"
           InputLabelProps={{ shrink: true }}
           {...register("fecha_nacimiento", { required: true })}
           error={!!errors.fecha_nacimiento}
           helperText={errors.fecha_nacimiento && "Este campo es obligatorio"}
+        
         />
       </Grid2>
     </Grid2>
+
 
     {/* Dirección */}
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
