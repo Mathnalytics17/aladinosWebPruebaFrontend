@@ -153,7 +153,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post(https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -282,7 +282,7 @@ export default function FormularioGoogleSheets() {
   
     // Enviar datos al backend
     try {
-      const response = await fetch(https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -400,7 +400,7 @@ export default function FormularioGoogleSheets() {
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post(https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -421,7 +421,7 @@ export default function FormularioGoogleSheets() {
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post(https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -657,7 +657,7 @@ export default function FormularioGoogleSheets() {
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post(https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
                   iban: value, // Enviar el IBAN al backend
                 });
       
