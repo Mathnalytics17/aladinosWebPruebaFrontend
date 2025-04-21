@@ -1,13 +1,14 @@
 import { useRouter } from "next/router";
-import {Grid2} from "@mui/material";
+import Grid from '@mui/material/Grid';
 import Box from "@mui/material/Box";
 import Header from "../components/header"
 import Footer from "../components/footer"
+import { useAuth } from '../../context/authContext';
 
 
 const Layout = ({ children }) => {
   const router = useRouter();
-
+  const { user } = useAuth();
   // Define las rutas que deben tener un ancho completo
   const isFullWidthPage = [
     "/operations/manage",
@@ -23,12 +24,12 @@ const Layout = ({ children }) => {
   ].includes(router.pathname);
 
   return (
-    <Grid2 container sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" ,backgroundColor: "#F5F5DC"}}>
+    <Grid container sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" ,backgroundColor: "#F5F5DC"}}>
       {/* Header */}
       <Header />
 
       {/* Contenido Principal */}
-      <Grid2
+      <Grid
         container
         sx={{
           flex: 1,
@@ -38,7 +39,7 @@ const Layout = ({ children }) => {
           alignItems: "center", // Centra verticalmente
         }}
       >
-        <Grid2
+        <Grid
           xs
           sx={{
             width: "100%", // Ocupa todo el ancho disponible
@@ -50,12 +51,12 @@ const Layout = ({ children }) => {
           }}
         >
           <Box flex={1}>{children}</Box>
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
 
       {/* Footer */}
       <Footer />
-    </Grid2>
+    </Grid>
   );
 };
 
