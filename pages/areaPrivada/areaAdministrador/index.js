@@ -398,28 +398,33 @@ const AdminPanel = () => {
 
   // Guardar cambios del socio
   const handleSaveChanges = async () => {
-    if (!selectedSocio) return;
-    
-    try {
-      setSaving(true);
-      await api.put(`users/socio/${selectedSocio.id}/`, selectedSocio);
-      
-      // Actualizar los datos en el estado
-      const updatedData = sociosData.map(socio => 
-        socio.id === selectedSocio.id ? selectedSocio : socio
-      );
-      
-      setSociosData(updatedData);
-      calculateStats(updatedData);
-      handleCloseSocio();
-    } catch (error) {
-      console.error('Error al guardar los cambios:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  if (!selectedSocio) return;
 
-  // Calcular edad
+  try {
+    setSaving(true);
+
+    // Copiamos el socio seleccionado y modificamos el fundraiser para enviar solo el ID
+    const payload = {
+      ...selectedSocio,
+      fundraiser: selectedSocio.fundraiser.id,  // Enviamos solo el ID
+    };
+
+    await api.put(`users/socio/${selectedSocio.id}/`, payload);
+
+    // Actualizar los datos en el estado (opcional, si quieres mantener el objeto completo en el estado)
+    const updatedData = sociosData.map(socio => 
+      socio.id === selectedSocio.id ? selectedSocio : socio
+    );
+
+    setSociosData(updatedData);
+    calculateStats(updatedData);
+    handleCloseSocio();
+  } catch (error) {
+    console.error('Error al guardar los cambios:', error);
+  } finally {
+    setSaving(false);
+  }
+};  // Calcular edad
   const calcularEdad = (fechaNacimiento) => {
     if (!fechaNacimiento) return 'N/A';
     const nacimiento = new Date(fechaNacimiento);

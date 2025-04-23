@@ -25,9 +25,9 @@ import {
   getColorClassName,
   getYAxisDomain,
   hasOnlyOneValueForKey,
-} from "@/lib/chartUtils"
-import { useOnWindowResize } from "@/lib/useOnWindowResize"
-import { cx } from "@/lib/utils"
+} from "@/shared/lib/chartUtils"
+import { useOnWindowResize } from "@/shared/lib/useOnWindowResize"
+import { cx } from "@/shared/lib/utils"
 
 //#region Shape
 function deepEqual<T>(obj1: T, obj2: T): boolean {

@@ -8,6 +8,7 @@ import { PeopleAlt, PieChart } from '@mui/icons-material';
 import AdminPanel from './areaAdministrador/index';
 import ComercialPanel from './areaComercial/index';
 import StatsPanel from './stats/index';
+import styles from './areaPrivada.module.css'
 
 
 
@@ -19,7 +20,7 @@ import { Breadcrumbs } from "../../shared/components/ui/navigation/Breadcrumbs";
 import { useRouter } from "next/router";
 import { AuthProvider } from "../../context/authContext";
 import localFont from "next/font/local"
-import "../../pages/globals.css"
+
 import ProtectedRole from '@/shared/components/protectedRoute';
 const pathsWithoutDefaultLayout = [
   "/",

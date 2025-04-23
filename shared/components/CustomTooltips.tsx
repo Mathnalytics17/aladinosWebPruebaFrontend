@@ -1,5 +1,5 @@
-import { chartColors, getColorClassName } from "@/lib/chartUtils"
-import { cx, formatters } from "@/lib/utils"
+import { chartColors, getColorClassName } from "@/shared/lib/chartUtils"
+import { cx, formatters } from "@/shared/lib/utils"
 import { TooltipProps } from "./BarChart"
 import { TooltipProps as TooltipComboBarChartProps } from "./ComboChart"
 

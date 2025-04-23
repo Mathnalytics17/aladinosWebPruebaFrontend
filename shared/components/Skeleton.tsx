@@ -1,4 +1,4 @@
-import { cx } from "@/lib/utils"
+import { cx } from "@/shared/lib/utils"
 
 function Skeleton({
   className,
