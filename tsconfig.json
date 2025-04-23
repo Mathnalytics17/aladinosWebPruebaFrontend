@@ -25,6 +25,7 @@
     "strictNullChecks": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./*"],  // Nueva ruta
       "@components/*": ["./shared/components/*"],
       "@context/*": ["./shared/context/*"],
       "@formats/*": ["./shared/formats/*"],

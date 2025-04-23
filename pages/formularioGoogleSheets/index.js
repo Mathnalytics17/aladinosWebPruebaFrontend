@@ -44,6 +44,8 @@ export default function FormularioGoogleSheets() {
   
   const numeroIdentificacionRef = useRef(null); // Referencia para el campo de Nº Identificación
 
+  const apiUrl =process.env.NEXT_PUBLIC_API_URL;
+  console.log(process.env.NEXT_PUBLIC_API_URL)
   // Función para validar el Nº de Identificación
   const validarNumeroIdentificacion = async () => {
     setLoading(true);
@@ -59,7 +61,7 @@ export default function FormularioGoogleSheets() {
   
     try {
       const response = await axios.post(
-        'https://api.altasfundacionaladina.org/api/validar-dni/', // Usa el endpoint de Django
+        `${process.env.NEXT_PUBLIC_API_URL}validar-dni/`, // Usa el endpoint de Django
         { numeroIdentificacion },
       );
   
@@ -77,24 +79,7 @@ export default function FormularioGoogleSheets() {
     }
   };
 
-  // Cargar borrador desde localStorage al iniciar
-  useEffect(() => {
-    const draft = JSON.parse(localStorage.getItem("formDraft"));
-    if (draft) {
-      Object.keys(draft).forEach((key) => {
-        if (key === "firma" && draft[key]) {
-          // Si hay una firma guardada, la cargamos en el canvas
-          signatureRefSocio.current.fromDataURL(draft[key]);
-        } else if (key === "fecha_nacimiento" && draft[key]) {
-          // Convertir fecha_nacimiento a objeto Date si es una cadena
-          setValue(key, new Date(draft[key]));
-        } else {
-          setValue(key, draft[key]);
-        }
-      });
-      setIsDraft(true);
-    }
-  }, [setValue]);
+
 
 
   const obtenerFechaFormateada = () => {
@@ -129,13 +114,13 @@ export default function FormularioGoogleSheets() {
     const firmaSocio = signatureRefSocio.current.toDataURL(); // Firma del socio
     const firmaCaptador = signatureRefCaptador.current.toDataURL(); // Firma del captado
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + "€" : data.importe;
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad  : data.importe;
       data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
       console.log(data.importe)
      
       const formattedData = {
         ...data,
-        
+        notas:data.notas,
         firma_socio: firmaSocio, // Agregar firma del socio
         firma_captador: firmaCaptador, // Agregar firma del captador
         quiere_correspondencia: data.recibe_correspondencia,
@@ -162,7 +147,7 @@ export default function FormularioGoogleSheets() {
         nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
       };
 
-      const response = await axios.post("https://api.altasfundacionaladina.org/api/registro/", formattedData);
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}registro/`, formattedData);
       console.log("Registro exitoso:", response.data);
       setSuccess(true);
       setError(null);
@@ -194,7 +179,10 @@ export default function FormularioGoogleSheets() {
     setLoading(false);
   }
   };
-
+  const fundraisers = [
+    { code: "2531", name: "David Torres Martín" },
+    { code: "2532", name: "Diego Pulido Marqués" }
+  ];
   const saveDraft = async (data) => {
     // Verificar que todos los campos obligatorios estén completos (excepto no_iban)
     const fechaFormateadahoy = obtenerFechaFormateada();
@@ -266,7 +254,7 @@ if (data.fecha_nacimiento instanceof Date) {
 
 console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es válida
    
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad + "€" : data.importe;
+    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad  : data.importe;
     console.log(data.importe)
     data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
     data.saludo= data.genero === "masculino" ? "D." : "femenino"? "Dña.":"nada";
@@ -295,7 +283,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
       no_iban:data.no_iban,
       importe: data.importe,
       otra_cantidad: data.otra_cantidad || '',
-      
+      notas:data.notas,
       telefono_casa: data.telefono_casa || '',
       periodicidad: data.periodicidad,
       primer_canal_captacion: "F2F Boost Impact (Madrid)",
@@ -316,13 +304,13 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
     };
   
     // Guardar borrador en localStorage
-    localStorage.setItem("formDraft", JSON.stringify(draftData));
+    //localStorage.setItem("formDraft", JSON.stringify(draftData));
     setIsDraft(true);
     toast.info("Borrador guardado correctamente");
   
     // Enviar datos al backend
     try {
-      const response = await fetch("https://api.altasfundacionaladina.org/api/registro/guardarBorrador/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}registro/guardarBorrador/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -365,25 +353,44 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
     <Typography variant="h6" gutterBottom>INFORMACIÓN DEL FUNDAISER</Typography>
     <Grid2 container spacing={3} sx={{ mb: 3 }}>
       <Grid2 item xs={6}>
-        <TextField
-          fullWidth
-          label="Código Fundraiser"
-          autoComplete="off"
-          {...register("fundraiser_code", { required: true })}
-          error={!!errors.fundraiser_code}
-          helperText={errors.fundraiser_code && "Este campo es obligatorio"}
-        />
-      </Grid2>
-      <Grid2 item xs={6}>
-        <TextField
-          fullWidth
-          label="Nombre Fundraiser"
-          autoComplete="off"
-          {...register("fundraiser_name", { required: true })}
-          error={!!errors.fundraiser_name}
-          helperText={errors.fundraiser_name && "Este campo es obligatorio"}
-        />
-      </Grid2>
+  <FormControl fullWidth error={!!errors.fundraiser_code}>
+    <InputLabel>Código Fundraiser</InputLabel>
+    <Select {...register("fundraiser_code")}
+      sx={{
+        minWidth: "250px", // Ajusta este valor según necesites
+        '& .MuiSelect-select': {
+          padding: '12px 14px', // Ajusta el padding si es necesario
+        },
+      }}>
+  {fundraisers.map((f) => (
+    <MenuItem key={f.code} value={f.code}>{f.code}</MenuItem>
+  ))}
+</Select>
+    {errors.fundraiser_code && (
+      <FormHelperText>Este campo es obligatorio</FormHelperText>
+    )}
+  </FormControl>
+</Grid2>
+<Grid2 item xs={6}>
+  <FormControl fullWidth error={!!errors.fundraiser_name}>
+    <InputLabel>Nombre Fundraiser</InputLabel>
+    
+<Select {...register("fundraiser_name")}
+  sx={{
+    minWidth: "250px", // Ajusta este valor según necesites
+    '& .MuiSelect-select': {
+      padding: '12px 14px', // Ajusta el padding si es necesario
+    },
+  }}>
+  {fundraisers.map((f) => (
+    <MenuItem key={f.code} value={f.name}>{f.name}</MenuItem>
+  ))}
+</Select>
+    {errors.fundraiser_name && (
+      <FormHelperText>Este campo es obligatorio</FormHelperText>
+    )}
+  </FormControl>
+</Grid2>
     </Grid2>
 
     {/* Sección: Información Personal */}
@@ -425,6 +432,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
             <MenuItem value="NIF">NIF</MenuItem>
             <MenuItem value="NIE">NIE</MenuItem>
             <MenuItem value="Pasaporte">Pasaporte</MenuItem>
+            <MenuItem value="CIF">CIF</MenuItem>
           </Select>
         </FormControl>
       </Grid2>
@@ -440,7 +448,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
               if (watch("tipo_identificacion") === "NIF") {
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}validar-dni/`, {
                     tipoid:'nif',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -461,7 +469,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
               else if(watch("tipo_identificacion") === "NIE"){
                 try {
                   // Realizar la solicitud al backend
-                  const response = await axios.post("https://api.altasfundacionaladina.org/api/validar-dni/", {
+                  const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}validar-dni/`, {
                     tipoid:'nie',
                     numero_identificacion: value, // Enviar el valor al backend
                   });
@@ -695,7 +703,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
       
               try {
                 // Realizar la solicitud al backend para validar el IBAN
-                const response = await axios.post("https://api.altasfundacionaladina.org/api/validar_iban/", {
+                const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}validar_iban/`, {
                   iban: value, // Enviar el IBAN al backend
                 });
       
@@ -744,9 +752,9 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
             {...register("importe", { required: true })}
             error={!!errors.importe}
           >
-            <MenuItem value="20€">20€</MenuItem>
-            <MenuItem value="30€">30€</MenuItem>
-            <MenuItem value="50€">50€</MenuItem>
+            <MenuItem value="20">20</MenuItem>
+            <MenuItem value="30">30</MenuItem>
+            <MenuItem value="50">50</MenuItem>
             <MenuItem value="otra_cantidad">Otra Cantidad</MenuItem>
           </Select>
         </FormControl>
@@ -794,7 +802,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
             error={!!errors.dia_presentacion}
           >
             <MenuItem value="Del 1 al 5">Del 1 al 5</MenuItem>
-            <MenuItem value="Del 11 al 15">Del 11 al 15</MenuItem>
+            <MenuItem value="El 11">El 11</MenuItem>
             <MenuItem value="Del 25 al 30">Del 25 al 30</MenuItem>
           </Select>
           {errors.dia_presentacion && (
@@ -884,6 +892,24 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
           Limpiar Firma
         </Button>
       </Grid2>
+
+      <Grid2 container spacing={3} sx={{ mb: 3 }}>
+  <Grid2 item xs={12}>
+    <TextField
+      fullWidth
+      label="Notas"
+      autoComplete="off"
+      multiline // Permite múltiples líneas
+      rows={4} // Número de filas visibles
+      {...register("notas")} // Registra el campo en el formulario
+      sx={{ minWidth: "480px" }} // Ajusta el ancho del campo
+      inputProps={{
+        maxLength: 500, // Limita la cantidad de caracteres (opcional)
+      }}
+      helperText="Agrega cualquier información adicional que consideres relevante." // Texto de ayuda
+    />
+  </Grid2>
+</Grid2>
     </Grid2>
 
     {/* Aceptación de ser socio/a */}
@@ -948,7 +974,8 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
           {loading ? <CircularProgress size={24} /> : "Continuar"}
         </Button>
       </Grid2>
-    </Grid2>       <Box
+    </Grid2>       
+    <Box
   sx={{
     backgroundColor: "#f5f5f5",
     padding: { xs: 2, sm: 3 },

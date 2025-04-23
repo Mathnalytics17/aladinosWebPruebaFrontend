@@ -1,0 +1,11 @@
+/* pages/areaPrivada/areaPrivada.module.css */
+/* Solo clases locales */
+.container {
+  padding: 2rem;
+  background-color: var(--background);
+}
+
+.button {
+  background: #3b82f6;
+  color: white;
+}
