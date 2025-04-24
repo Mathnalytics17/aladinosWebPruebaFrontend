@@ -41,6 +41,7 @@ import {
 import { InputAdornment } from '@mui/material';
 import AssignmentReturn from '@mui/icons-material/AssignmentReturn';
 import { BarChart} from '@mui/x-charts'; // Añade estos imports
+import Cancel from '@mui/icons-material/Cancel';
 import { 
   Search, 
   FilterList, 
