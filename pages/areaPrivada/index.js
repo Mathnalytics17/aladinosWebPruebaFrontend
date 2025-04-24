@@ -48,11 +48,11 @@ const AreaPrivada = () => {
   const { tab = 'admin' } = router.query;
 
   const handleTabChange = (event, newValue) => {
-    const tabs = ['admin',  'estadisticas'];
+    const tabs = [  'estadisticas','admin',];
     router.push(`/areaPrivada?tab=${tabs[newValue]}`, undefined, { shallow: true });
   };
 
-  const tabValue = ['admin', 'estadisticas'].indexOf(tab);
+  const tabValue = [ 'estadisticas','admin'].indexOf(tab);
 
   return (
     <AuthProvider>
@@ -92,24 +92,26 @@ const AreaPrivada = () => {
             }
           }}
         >
+           <Tab 
+            label="Estadísticas" 
+            icon={<PieChart />}
+            iconPosition="start"
+          />
           <Tab 
             label="Administración" 
          
             iconPosition="start"
           />
          
-          <Tab 
-            label="Estadísticas" 
-            icon={<PieChart />}
-            iconPosition="start"
-          />
+         
         </Tabs>
       </Paper>
 
       {/* Contenido del panel */}
+      
+      {tab === 'estadisticas' && <StatsPanel />}
       {tab === 'admin' && <AdminPanel />}
  
-      {tab === 'estadisticas' && <StatsPanel />}
     </Box></main>
               </div>
             

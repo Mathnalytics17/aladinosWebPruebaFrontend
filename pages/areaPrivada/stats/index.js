@@ -3,7 +3,10 @@ import axios from 'axios';
 import { 
   Grid, Paper, Typography, Box, MenuItem, Select, FormControl, InputLabel,
   Card, CardContent, List, ListItem, ListItemText, Divider, Chip, Avatar,
-  CircularProgress, Alert, TextField,Button,
+  CircularProgress, Alert, TextField,Button,  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,IconButton,
 } from '@mui/material';
 import { 
   PieChart, BarChart, LineChart,
@@ -17,8 +20,9 @@ import dayjs from 'dayjs';
 import { alpha, useTheme } from '@mui/material/styles';
 import { 
   TrendingUp, People, Euro, Cake, LocationOn, AssignmentInd,
-  CheckCircle, Warning, Error, FilterList, Search
+  CheckCircle, Warning, Error, FilterList, Search,Close,
 } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 import ProtectedRole from '@/shared/components/protectedRoute';
 import { ArrowBack, ExitToApp } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
@@ -35,7 +39,7 @@ const DashboardSocios = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [selectedSocio, setSelectedSocio] = useState(null);
   // Obtener datos del backend
   useEffect(() => {
     const fetchData = async () => {
@@ -56,8 +60,21 @@ const DashboardSocios = () => {
     fetchData();
   }, []);
 
+  const StatusChip = styled(Chip)(({ theme }) => ({
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    padding: theme.spacing(0.5),
+    minWidth: 80,
+  }));
   
-
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return format(parseISO(dateString), 'dd/MM/yyyy HH:mm', { locale: es });
+    } catch {
+      return 'N/A';
+    }
+  };
   // Filtrar socios basado en los filtros seleccionados
   const filteredSocios = useMemo(() => {
     let result = [...socios];
@@ -164,12 +181,7 @@ const DashboardSocios = () => {
               color={activeTab === 'demographic' ? 'primary' : 'default'}
               variant={activeTab === 'demographic' ? 'filled' : 'outlined'}
             />
-            <Chip 
-              label="Rendimiento comercial" 
-              onClick={() => setActiveTab('performance')} 
-              color={activeTab === 'performance' ? 'primary' : 'default'}
-              variant={activeTab === 'performance' ? 'filled' : 'outlined'}
-            />
+            
           </Box>
         </Box>
 
@@ -341,70 +353,8 @@ const DashboardSocios = () => {
                 />
               </Card>
             </Grid>
-          </Grid>
-        )}
-
-        {activeTab === 'demographic' && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 2, height: '100%', borderRadius: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución por edades</Typography>
-                <BarChart
-                  xAxis={[{
-                    scaleType: 'band',
-                    data: ['20-29', '30-39', '40-49', '50-59', '60-69', '70+'],
-                  }]}
-                  series={[{
-                    data: stats.edades,
-                    color: theme.palette.secondary.main,
-                  }]}
-                  height={400}
-                />
-              </Card>
-            </Grid>
             
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 2, height: '100%', borderRadius: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución por género</Typography>
-                <PieChart
-                  series={[{
-                    data: [
-                      { value: stats.genero.masculino, label: 'Masculino', color: '#4285F4' },
-                      { value: stats.genero.femenino, label: 'Femenino', color: '#EA4335' },
-                      { value: stats.genero.otro, label: 'Otro', color: '#FBBC05' },
-                    ],
-                    innerRadius: 30,
-                  }]}
-                  height={400}
-                  slotProps={{
-                    legend: {
-                      direction: 'row',
-                      position: { vertical: 'bottom', horizontal: 'middle' },
-                    },
-                  }}
-                />
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Card sx={{ p: 2, borderRadius: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución geográfica</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  {Object.entries(stats.ciudades)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([city, count]) => (
-                      <CityCard key={city} city={city} count={count} />
-                    ))}
-                </Box>
-              </Card>
-            </Grid>
-          </Grid>
-        )}
-
-        {activeTab === 'performance' && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+             <Grid item xs={12} md={6}>
               <Card sx={{ p: 2, height: '100%', borderRadius: 3 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Socios por comercial</Typography>
                 <List sx={{ width: '100%' }}>
@@ -458,8 +408,134 @@ const DashboardSocios = () => {
                 </Box>
               </Card>
             </Grid>
+          
           </Grid>
+          
         )}
+
+        {activeTab === 'demographic' && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%', borderRadius: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución por edades</Typography>
+                <BarChart
+                  xAxis={[{
+                    scaleType: 'band',
+                    data: ['20-29', '30-39', '40-49', '50-59', '60-69', '70+'],
+                  }]}
+                  series={[{
+                    data: stats.edades,
+                    color: theme.palette.secondary.main,
+                  }]}
+                  height={400}
+                />
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+  <Card sx={{ p: 3, height: '100%', borderRadius: 3, display: 'flex', flexDirection: 'column' }}>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución por género</Typography>
+    
+    <Box sx={{ 
+      flex: 1, 
+      minHeight: 0,
+      display: 'flex', 
+      flexDirection: 'column',
+      justifyContent: 'space-between' 
+    }}>
+      {/* Gráfico principal con altura flexible */}
+      <Box sx={{ flex: 1 }}>
+        <PieChart
+          series={[{
+            data: [
+              { value: stats.genero.masculino, label: 'Masculino', color: '#4285F4' },
+              { value: stats.genero.femenino, label: 'Femenino', color: '#EA4335' },
+              { value: stats.genero.otro, label: 'Otro', color: '#FBBC05' },
+            ],
+            innerRadius: 40, // Aumenté el radio interno
+            outerRadius: 150, // Radio externo más grande
+          }]}
+          slotProps={{
+            legend: {
+              hidden: true // Ocultamos la leyenda por defecto
+            }
+          }}
+          sx={{
+            width: '100%',
+            height: '100%'
+          }}
+        />
+      </Box>
+
+      {/* Leyenda personalizada en la parte inferior */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center',
+        gap: 3,
+        mt: 2,
+        flexWrap: 'wrap'
+      }}>
+        {[
+          { label: 'Masculino', color: '#4285F4' },
+          { label: 'Femenino', color: '#EA4335' },
+          { label: 'Otro', color: '#FBBC05' }
+        ].map((item) => (
+          <Box key={item.label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ 
+              width: 16, 
+              height: 16, 
+              backgroundColor: item.color,
+              borderRadius: '2px'
+            }}/>
+            <Typography variant="body2">{item.label}</Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  </Card>
+</Grid>
+            
+<Grid item xs={12}>
+  <Card sx={{ p: 2, borderRadius: 3 }}>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Distribución geográfica</Typography>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+      {Object.entries(
+        Object.entries(stats.ciudades || {}).reduce((acc, [rawLocation, count]) => {
+          // Normalizamos eliminando espacios extras y convirtiendo a minúsculas
+          const normalizedLocation = rawLocation.trim().toLowerCase();
+          if (!acc[normalizedLocation]) {
+            acc[normalizedLocation] = 0;
+          }
+          acc[normalizedLocation] += count;
+          return acc;
+        }, {})
+      )
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([location, count]) => {
+        // Separamos ciudad y provincia si existe
+        const [city, province] = location.split(', ');
+        
+        // Formateamos para mostrar
+        const displayText = province
+          ? `${city.charAt(0).toUpperCase() + city.slice(1)}, ${province.toUpperCase()}`
+          : city.charAt(0).toUpperCase() + city.slice(1);
+        
+        return (
+          <CityCard 
+            key={location} 
+            city={displayText}
+            count={count} 
+          />
+        );
+      })}
+    </Box>
+  </Card>
+</Grid>
+          </Grid>
+
+        )}
+
 
         {/* Últimos socios */}
         <Card sx={{ mt: 3, borderRadius: 3 }}>
@@ -470,7 +546,16 @@ const DashboardSocios = () => {
             <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
               {filteredSocios.slice(0, 5).map((socio, index) => (
                 <React.Fragment key={socio.id || index}>
-                  <ListItem alignItems="flex-start">
+                   <ListItem 
+                      alignItems="flex-start"
+                      button // Hace que sea clickeable
+                      onClick={() => setSelectedSocio(socio)} // Establece el socio seleccionado
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        }
+                      }}
+                    >
                     <Avatar sx={{ bgcolor: getRandomColor(), mr: 2 }}>
                       {socio.nombre_socio?.charAt(0)}{socio.apellido_socio?.charAt(0)}
                     </Avatar>
@@ -520,6 +605,105 @@ const DashboardSocios = () => {
             </List>
           </CardContent>
         </Card>
+        {/* Modal/Drawer para mostrar la ficha del socio */}
+{selectedSocio && (
+  <Dialog
+    open={!!selectedSocio}
+    onClose={() => setSelectedSocio(null)}
+    maxWidth="md"
+    fullWidth
+  >
+    <DialogTitle>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        Ficha del Socio
+        <IconButton onClick={() => setSelectedSocio(null)}>
+          <Close />
+        </IconButton>
+      </Box>
+    </DialogTitle>
+    <DialogContent>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" mb={2}>Información Personal</Typography>
+          <Box mb={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Nombre:</Typography>
+                <Typography>{selectedSocio.nombre_socio || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Apellidos:</Typography>
+                <Typography>{selectedSocio.apellido_socio || 'N/A'}</Typography>
+              </Grid>
+              {/* Resto de campos personales... */}
+            </Grid>
+          </Box>
+
+          <Typography variant="subtitle1" mb={2}>Dirección</Typography>
+          <Box>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2">Dirección:</Typography>
+                <Typography>{selectedSocio.via_principal || 'N/A'}</Typography>
+              </Grid>
+              {/* Resto de campos de dirección... */}
+            </Grid>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" mb={2}>Información de Registro</Typography>
+          <Box mb={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Fecha Alta:</Typography>
+                <Typography>
+                  {formatDate(selectedSocio.fecha_alta)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Estado:</Typography>
+                <StatusChip
+                  label={selectedSocio.status || 'Pendiente'}
+                  sx={{
+                    backgroundColor: (() => {
+                      switch(selectedSocio?.status) {
+                        case 'Verificado': return '#4CAF50';
+                        case 'Ilocalizable': return '#2196F3';
+                        case 'Baja': return '#F44336';
+                        case 'Incidencia': return '#FF9800';
+                        case 'Pendiente': return '#3c3c3c';
+                        default: return '#FFC107';
+                      }
+                    })(),
+                    color: 'white',
+                    fontWeight: 'bold',
+                  }}
+                />
+              </Grid>
+              {/* Resto de campos de registro... */}
+            </Grid>
+          </Box>
+
+          <Typography variant="subtitle1" mb={2}>Información de Pago</Typography>
+          <Box>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Importe:</Typography>
+                <Typography>€{selectedSocio.importe || 'N/A'}</Typography>
+              </Grid>
+              {/* Resto de campos de pago... */}
+            </Grid>
+          </Box>
+        </Grid>
+      </Grid>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={() => setSelectedSocio(null)}>Cerrar</Button>
+      
+    </DialogActions>
+  </Dialog>
+)}
       </Box>
     </ProtectedRole>
   );
@@ -582,13 +766,26 @@ const CityCard = ({ city, count }) => {
         <LocationOn sx={{ color: '#EA4335', mr: 1 }} />
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{city}</Typography>
       </Box>
-      <Typography variant="h5" sx={{ fontWeight: 800 }}>{count}</Typography>
-      <Typography variant="caption" color="text.secondary">socios</Typography>
+      <Typography 
+        variant="h5" 
+        sx={{ 
+          fontWeight: 800,
+          ml: 11, // ← Mueve el número 2 unidades (16px) a la derecha
+          textAlign: 'left' // Opcional: asegura la alineación izquierda
+        }}
+      >{count}</Typography>
+      <Typography variant="h5" 
+        sx={{ 
+          fontWeight: 800,
+          ml:0, // ← Mueve el número 2 unidades (16px) a la derecha
+          textAlign: 'center' // Opcional: asegura la alineación izquierda
+        }} >socios</Typography>
     </Card>
   );
 };
 
 function calculateStats(filteredSocios, allSocios) {
+  // Inicialización de estadísticas
   const stats = {
     cuotaMedia: 0,
     cuotasComunes: [],
@@ -597,7 +794,7 @@ function calculateStats(filteredSocios, allSocios) {
     edades: Array(6).fill(0),
     ciudades: {},
     comerciales: {},
-    estados: { Verificado: 0, Pendiente: 0, Baja: 0, Ilocalizable: 0 },
+    estados: { Verificado: 0, Pendiente: 0, Baja: 0, Ilocalizable: 0, Incidencia: 0 },
     nuevosEsteMes: 0,
     edadMedia: 0,
     trendTotal: 0,
@@ -606,7 +803,6 @@ function calculateStats(filteredSocios, allSocios) {
     trendNuevos: 0,
     monthlyData: Array(12).fill(0),
     monthlyLabels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-    // Nuevas métricas de facturación
     facturacionMensual: 0,
     facturacionTotal: 0,
     facturacionPerdida: 0,
@@ -614,59 +810,89 @@ function calculateStats(filteredSocios, allSocios) {
     trendFacturacion: 0
   };
 
+  const currentDate = dayjs();
+  const currentMonth = currentDate.month();
+  const currentYear = currentDate.year();
   const cuotaCounts = {};
   let totalAge = 0;
-  const currentMonth = dayjs().month();
-  const currentYear = dayjs().year();
-
-  // Variables para cálculo de facturación
+  let totalCuota = 0;
   let facturacionTotal = 0;
   let facturacionActiva = 0;
   let facturacionPerdida = 0;
   let previousMonthFacturacion = 0;
 
-  // Calcular datos mensuales para tendencias
-  const monthlyCounts = Array(12).fill(0);
+  // Función para verificar si un socio NO debe ser facturado
+  const noFacturable = (socio) => {
+    return socio.is_borrador || 
+           socio.status === 'Baja' || 
+           socio.status === 'Incidencia' || 
+           socio.devolucion;
+  };
+
+  // Función para calcular facturación según periodicidad
+  const calcularFacturacion = (importe, periodicidad, esMensual = false) => {
+    const importeNum = parseFloat(importe) || 0;
+    if (esMensual) {
+      // Para facturación mensual, siempre devolvemos el importe mensual
+      switch(periodicidad) {
+        case 'Mensual': return importeNum;
+        case 'Trimestral': return importeNum / 3;
+        case 'Semestral': return importeNum / 6;
+        case 'Anual': return importeNum / 12;
+        default: return importeNum;
+      }
+    } else {
+      // Para facturación anual
+      switch(periodicidad) {
+        case 'Mensual': return importeNum * 12;
+        case 'Trimestral': return importeNum * 4;
+        case 'Semestral': return importeNum * 2;
+        case 'Anual': return importeNum;
+        default: return importeNum;
+      }
+    }
+  };
+
+  // 1. Procesar todos los socios para datos mensuales
   const currentYearSocios = allSocios.filter(socio => {
-    const fechaAlta = dayjs(socio.fecha_alta);
-    return fechaAlta.year() === currentYear;
+    return dayjs(socio.fecha_alta).year() === currentYear;
   });
 
   currentYearSocios.forEach(socio => {
     const month = dayjs(socio.fecha_alta).month();
-    monthlyCounts[month]++;
+    stats.monthlyData[month]++;
   });
 
-  stats.monthlyData = monthlyCounts;
+  // 2. Procesar socios del mes anterior para comparación
+  const previousMonthSocios = allSocios.filter(socio => {
+    const fechaAlta = dayjs(socio.fecha_alta);
+    return fechaAlta.month() === currentMonth - 1 && fechaAlta.year() === currentYear;
+  });
 
-  // Procesar cada socio filtrado
+  previousMonthSocios.forEach(socio => {
+    if (!noFacturable(socio)) {
+      previousMonthFacturacion += calcularFacturacion(socio.importe, socio.periodicidad, true); // Facturación mensual
+    }
+  });
+
+  // 3. Procesar socios filtrados (la lista principal)
   filteredSocios.forEach(socio => {
-    console.log(socio);
     const importe = parseFloat(socio.importe) || 0;
-    console.log(importe);
-    // 1. Cálculo de facturación según periodicidad
-    let facturacionAnual = 0;
-    switch(socio.periodicidad) {
-      case 'Semestral': facturacionAnual = importe * 2; break;
-      case 'Mensual': facturacionAnual = importe * 12; break;
-      case 'Trimestral': facturacionAnual = importe * 4; break;
-      case 'Anual': facturacionAnual = importe; break;
-    }
+    const facturable = !noFacturable(socio);
+    const facturacionAnual = facturable ? calcularFacturacion(importe, socio.periodicidad) : 0;
+    const facturacionMensual = facturable ? calcularFacturacion(importe, socio.periodicidad, true) : 0;
 
-    facturacionTotal += facturacionAnual;
-    console.log(facturacionTotal);
-
-    // 2. Determinar si es facturación activa o perdida
-    if (socio.status === 'Baja' || socio.devolucion === true) {
-      facturacionPerdida += facturacionAnual;
+    // Estadísticas de facturación (solo para socios facturables)
+    if (facturable) {
+      facturacionTotal += facturacionAnual;
+      facturacionActiva += facturacionMensual; // Usamos el valor mensual aquí
+      totalCuota += importe;
+      cuotaCounts[importe] = (cuotaCounts[importe] || 0) + 1;
     } else {
-      facturacionActiva += facturacionAnual;
+      facturacionPerdida += calcularFacturacion(importe, socio.periodicidad); // Facturación anual perdida
     }
 
-    // 3. Cálculos existentes (mantenidos igual)
-    stats.cuotaMedia += importe;
-    cuotaCounts[importe] = (cuotaCounts[importe] || 0) + 1;
-    
+    // Resto de estadísticas (igual que antes)
     if (socio.genero_socio === 'masculino') stats.genero.masculino++;
     else if (socio.genero_socio === 'femenino') stats.genero.femenino++;
     else stats.genero.otro++;
@@ -676,15 +902,17 @@ function calculateStats(filteredSocios, allSocios) {
     }
     
     if (socio.fecha_nacimiento) {
-      const birthDate = dayjs(socio.fecha_nacimiento);
-      const edad = dayjs().diff(birthDate, 'year');
+      const edad = currentDate.diff(dayjs(socio.fecha_nacimiento), 'year');
       const edadIndex = Math.min(Math.floor((edad - 20) / 10), 5);
       if (edadIndex >= 0) stats.edades[edadIndex]++;
       totalAge += edad;
     }
     
     if (socio.ciudad_direccion) {
-      stats.ciudades[socio.ciudad_direccion] = (stats.ciudades[socio.ciudad_direccion] || 0) + 1;
+      const ciudadCompleta = socio.estado_provincia 
+        ? `${socio.ciudad_direccion}, ${socio.estado_provincia}`
+        : socio.ciudad_direccion;
+      stats.ciudades[ciudadCompleta] = (stats.ciudades[ciudadCompleta] || 0) + 1;
     }
     
     if (socio.fundraiser) {
@@ -702,50 +930,37 @@ function calculateStats(filteredSocios, allSocios) {
     }
   });
 
-  // 4. Cálculo de facturación mensual (promedio anual activo)
-  stats.facturacionMensual = (facturacionActiva ).toFixed(2);
-  stats.facturacionTotal = facturacionTotal.toFixed(2);
-  stats.facturacionPerdida = facturacionPerdida.toFixed(2);
-  stats.facturacionActiva = facturacionActiva.toFixed(2);
+  // 4. Cálculos finales
+  const sociosFacturablesCount = filteredSocios.filter(socio => !noFacturable(socio)).length;
 
-  // 5. Cálculo de tendencias
-  const previousMonthSocios = allSocios.filter(socio => {
-    const fechaAlta = dayjs(socio.fecha_alta);
-    return fechaAlta.month() === currentMonth - 1 && fechaAlta.year() === currentYear;
-  });
-
-  previousMonthSocios.forEach(socio => {
-    const importe = parseFloat(socio.importe) || 0;
-    switch(socio.periodicidad) {
-      case 'Mensual': previousMonthFacturacion += importe * 12; break;
-      case 'Trimestral': previousMonthFacturacion += importe * 4; break;
-      case 'Semestral': previousMonthFacturacion += importe * 2; break;
-      case 'Anual': previousMonthFacturacion += importe; break;
-    }
-  });
-
-  stats.trendFacturacion = previousMonthFacturacion > 0 
-    ? ((facturacionActiva - previousMonthFacturacion) / previousMonthFacturacion * 100).toFixed(1)
-    : facturacionActiva > 0 ? '100.0' : '0.0';
-
-  // Resto de cálculos estadísticos
+  stats.cuotaMedia = sociosFacturablesCount > 0 ? parseFloat((totalCuota / sociosFacturablesCount).toFixed(2)) : 0;
+  
   stats.cuotasComunes = Object.entries(cuotaCounts)
     .map(([value, count]) => ({ value: parseFloat(value), count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  stats.cuotaMedia = filteredSocios.length > 0 ? (stats.cuotaMedia / filteredSocios.length).toFixed(2) : 0;
   stats.edadMedia = filteredSocios.length > 0 ? Math.round(totalAge / filteredSocios.length) : 0;
 
-  // Tendencias existentes (simplificadas)
+  // Facturación - ahora facturacionActiva ya es mensual
+  stats.facturacionMensual = parseFloat(facturacionActiva.toFixed(2));
+  stats.facturacionTotal = parseFloat(facturacionTotal.toFixed(2));
+  stats.facturacionPerdida = parseFloat(facturacionPerdida.toFixed(2));
+  stats.facturacionActiva = parseFloat(facturacionActiva.toFixed(2));
+
+  // Tendencias
+  stats.trendFacturacion = previousMonthFacturacion > 0 
+    ? parseFloat(((facturacionActiva - previousMonthFacturacion) / previousMonthFacturacion * 100).toFixed(1))
+    : facturacionActiva > 0 ? 100.0 : 0.0;
+
   if (allSocios.length > 0) {
-    const totalSocios = allSocios.length;
-    const filteredCount = filteredSocios.length;
-    stats.trendTotal = ((filteredCount - totalSocios) / totalSocios * 100).toFixed(1);
-    stats.trendCuota = (Math.random() * 10 - 2).toFixed(1);
-    stats.trendEdad = (Math.random() * 5 - 1).toFixed(1);
-    stats.trendNuevos = (Math.random() * 30 + 5).toFixed(1);
+    stats.trendTotal = parseFloat(((filteredSocios.length - allSocios.length) / allSocios.length * 100).toFixed(1));
   }
+
+  // Tendencias simuladas (puedes reemplazar con cálculos reales)
+  stats.trendCuota = parseFloat((Math.random() * 10 - 2).toFixed(1));
+  stats.trendEdad = parseFloat((Math.random() * 5 - 1).toFixed(1));
+  stats.trendNuevos = parseFloat((Math.random() * 30 + 5).toFixed(1));
 
   return stats;
 }

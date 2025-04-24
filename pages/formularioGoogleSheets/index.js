@@ -144,7 +144,8 @@ export default function FormularioGoogleSheets() {
         mandato:'',
         nombre_autom: data.nombre + ' '+ data.apellidos+ ' '+ '-'+ ' '+ 'Domiciliación',
         persona_id:'',
-        nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio'
+        nombre_asterisco:data.nombre + ' ' +  data.apellidos+ ' '+'-'+ ' '+ 'Socio',
+        is_borrador:false,
       };
 
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}registro/`, formattedData);
@@ -179,10 +180,34 @@ export default function FormularioGoogleSheets() {
     setLoading(false);
   }
   };
-  const fundraisers = [
-    { code: "2531", name: "David Torres Martín" },
-    { code: "2532", name: "Diego Pulido Marqués" }
-  ];
+ 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+
+
+  const [fundraisers, setFundraisers] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`// Nota la barra adicional
+         
+          
+        );
+        
+        setFundraisers(response.data); // Axios usa response.data
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching fundraisers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+  console.log(fundraisers)
   const saveDraft = async (data) => {
     // Verificar que todos los campos obligatorios estén completos (excepto no_iban)
     const fechaFormateadahoy = obtenerFechaFormateada();
@@ -300,7 +325,8 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
       descripcion: '',
       nombre_autom: data.nombre + ' ' + data.apellidos + ' ' + '-' + ' ' + 'Domiciliación',
       nombre_asterisco: data.nombre + ' ' + data.apellidos + ' ' + '-' + ' ' + 'Socio',
-      dia_presentacion:data.dia_presentacion
+      dia_presentacion:data.dia_presentacion,
+      is_borrador:true,
     };
   
     // Guardar borrador en localStorage
@@ -363,7 +389,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
         },
       }}>
   {fundraisers.map((f) => (
-    <MenuItem key={f.code} value={f.code}>{f.code}</MenuItem>
+    <MenuItem key={f.fundraiser_code} value={f.fundraiser_code}>{f.fundraiser_code}</MenuItem>
   ))}
 </Select>
     {errors.fundraiser_code && (
@@ -383,7 +409,7 @@ console.log(fechaNacimiento); // Salida: "12/03/2022" o "" si la fecha no es vá
     },
   }}>
   {fundraisers.map((f) => (
-    <MenuItem key={f.code} value={f.name}>{f.name}</MenuItem>
+    <MenuItem key={f.fundraiser_code} value={`${f.first_name} ${f.last_name}`}>{f.first_name} {f.last_name} </MenuItem>
   ))}
 </Select>
     {errors.fundraiser_name && (
