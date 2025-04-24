@@ -78,7 +78,7 @@ useEffect(() => {
             primer_canal_captacion: data.primer_canal_captacion,
             canal_entrada: data.canal_entrada,
             fecha_creacion: new Date().toISOString(),
-            telefono: data.movil,
+            telefono_socio: data.movil,
           };
         }).filter(Boolean); // Quitar los null si no se encontró el fundraiser
 
