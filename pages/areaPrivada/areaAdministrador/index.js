@@ -38,6 +38,7 @@ import {
   Divider,
   Tooltip,LinearProgress // Añade esta importación
 } from '@mui/material';
+import { red, blue } from '@mui/material/colors';
 import { InputAdornment } from '@mui/material';
 import AssignmentReturn from '@mui/icons-material/AssignmentReturn';
 import { BarChart} from '@mui/x-charts'; // Añade estos imports
@@ -64,7 +65,9 @@ import {
   PhoneDisabled,
   Info,
   Edit,
-  Delete
+  Delete,
+    Add,
+  Clear
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
@@ -111,7 +114,7 @@ const AdminPanel = () => {
   const [filter, setFilter] = useState('todos');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [orderBy, setOrderBy] = useState('fecha_alta');
+  const [orderBy, setOrderBy] = useState('fecha_creacion');
   const [order, setOrder] = useState('desc');
   const [selectedSocio, setSelectedSocio] = useState(null);
   const [sociosData, setSociosData] = useState([]);
@@ -132,6 +135,64 @@ const [endDate, setEndDate] = React.useState(null);
   });
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [editMode, setEditMode] = useState(false); // Nuevo estado para controlar el modo edición
+
+  // Nuevos estados para filtros avanzados
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [currentFilter, setCurrentFilter] = useState({
+    column: '',
+    operator: 'contains',
+    value: ''
+  });
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Columnas disponibles para filtrar
+  const availableColumns = [
+    { 
+      id: 'status', 
+      label: 'Estado', 
+      type: 'multi-select', 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+    },
+  
+    { id: 'nombre_socio', label: 'Nombre', type: 'text' },
+    { id: 'apellido_socio', label: 'Apellidos', type: 'text' },
+    { id: 'telefono_socio', label: 'Teléfono', type: 'text' },
+    { id: 'email_socio', label: 'Email', type: 'text' },
+    { id: 'ciudad_direccion', label: 'Ciudad', type: 'text' },
+    { id: 'importe', label: 'Cuota', type: 'number' },
+    { id: 'periodicidad', label: 'Periodicidad', type: 'text' },
+    { id: 'no_llamadas', label: 'N° Llamadas', type: 'number' },
+    { id: 'is_borrador', label: 'Incompleto', type: 'boolean' },
+    { id: 'fundraiser', label: 'Comercial', type: 'select', options: [] }
+  ];
+
+  // Operadores disponibles
+  const operators = {
+    text: [
+      { value: 'contains', label: 'contiene' },
+      { value: 'equals', label: 'es igual a' },
+      { value: 'startsWith', label: 'comienza con' },
+      { value: 'endsWith', label: 'termina con' }
+    ],
+    number: [
+      { value: 'equals', label: '=' },
+      { value: 'greaterThan', label: '>' },
+      { value: 'lessThan', label: '<' },
+      { value: 'greaterThanOrEqual', label: '>=' },
+      { value: 'lessThanOrEqual', label: '<=' }
+    ],
+    date: [
+      { value: 'equals', label: 'es igual a' },
+      { value: 'greaterThan', label: 'después de' },
+      { value: 'lessThan', label: 'antes de' }
+    ],
+    boolean: [
+      { value: 'equals', label: 'es' }
+    ]
+  };
+
+
   // Crear instancia de axios
   const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -231,40 +292,40 @@ const [endDate, setEndDate] = React.useState(null);
     fetchData();
   }, []);
 
-  // Obtener llamadas cuando se selecciona un socio
-  useEffect(() => {
-    const fetchLlamadas = async () => {
-      if (!selectedSocio) return;
+// Obtener llamadas cuando se selecciona un socio
+useEffect(() => {
+  const fetchLlamadas = async () => {
+    if (!selectedSocio?.id) return;  // Asegurarnos de que hay un ID
+    
+    try {
+      const response = await api.get('llamadas/', {
+        params: { socio_id: selectedSocio.id }
+      });
       
-      try {
-        const response = await api.get('llamadas/', {
-          params: { socio_id: selectedSocio.id } // Cambiado para filtrar correctamente por socio_id
-        });
-        
-        setLlamadasData(response.data || []);
-        
-      } catch (error) {
-        if (error.response) {
-          switch(error.response.status) {
-            case 401:
-              console.error('No autorizado - Redirigiendo a login');
-              break;
-            case 404:
-              setLlamadasData([]);
-              break;
-            default:
-              console.error('Error al obtener llamadas:', error.response.data);
-              setLlamadasData([]);
-          }
-        } else {
-          console.error('Error de conexión:', error.message);
-          setLlamadasData([]);
+      setLlamadasData(response.data || []);
+      
+    } catch (error) {
+      if (error.response) {
+        switch(error.response.status) {
+          case 401:
+            console.error('No autorizado - Redirigiendo a login');
+            break;
+          case 404:
+            setLlamadasData([]);
+            break;
+          default:
+            console.error('Error al obtener llamadas:', error.response.data);
+            setLlamadasData([]);
         }
+      } else {
+        console.error('Error de conexión:', error.message);
+        setLlamadasData([]);
       }
-    };
+    }
+  };
 
-    fetchLlamadas();
-  }, [selectedSocio]);
+  fetchLlamadas();
+}, [selectedSocio?.id]);  // Solo dependemos del ID, no del objeto completo
 
   // Calcular estadísticas
   const calculateStats = (data) => {
@@ -326,44 +387,153 @@ edades.forEach(edad => {
       distribucion_edad: distribucionEdad
     });
   };
-  console.log(sociosData)
-  // Filtrar y ordenar datos
-  const filteredData = sociosData
-    .filter(socio => {
-      const matchesSearch = `${socio.nombre_socio || ''} ${socio.apellido_socio || ''} ${socio.numero_identificacion_socio || ''}`
+
+// Manejar cambios en el filtro actual
+const handleFilterColumnChange = (e) => {
+  const columnId = e.target.value;
+  const column = availableColumns.find(c => c.id === columnId);
+  
+  setCurrentFilter({
+    column: columnId,
+    operator: column?.type === 'boolean' ? 'equals' : 
+             column?.type === 'number' ? 'equals' : 
+             column?.type === 'date' ? 'equals' : 'contains',
+    value: column?.type === 'boolean' ? true : 
+           column?.type === 'multi-select' ? [] : ''
+  });
+};
+
+// Añadir un nuevo filtro
+const addFilter = () => {
+  if (!currentFilter.column || 
+      (currentFilter.value === '' && !Array.isArray(currentFilter.value)) ||
+      (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)) {
+    return;
+  }
+  
+  // Verificar si ya existe un filtro para esta columna
+  const existingFilterIndex = activeFilters.findIndex(f => f.column === currentFilter.column);
+  
+  if (existingFilterIndex >= 0) {
+    // Reemplazar el filtro existente
+    const updatedFilters = [...activeFilters];
+    updatedFilters[existingFilterIndex] = currentFilter;
+    setActiveFilters(updatedFilters);
+  } else {
+    // Añadir nuevo filtro
+    setActiveFilters([...activeFilters, currentFilter]);
+  }
+  
+  // Resetear el filtro actual
+  setCurrentFilter({
+    column: '',
+    operator: 'contains',
+    value: ''
+  });
+};
+
+// Eliminar un filtro
+const removeFilter = (columnId) => {
+  setActiveFilters(activeFilters.filter(filter => filter.column !== columnId));
+};
+
+// Limpiar todos los filtros
+const clearAllFilters = () => {
+  setActiveFilters([]);
+  setSearchTerm('');
+  setPendingFilter(false);
+  setVerifiedThisMonthFilter(false);
+  setIncidenceFilter(false);
+  setStartDate(null);
+  setEndDate(null);
+};
+
+// Aplicar los filtros a los datos
+const applyFilters = (data) => {
+  return data.filter(socio => {
+    // Filtro de búsqueda general
+    const matchesSearch = searchTerm === '' || 
+      `${socio.nombre_socio || ''} ${socio.apellido_socio || ''} ${socio.numero_identificacion_socio || ''}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      
-        const matchesFilter = filter === 'todos' || 
-        (filter === 'Verificado' && socio.status === 'Verificado') || 
-        (filter === 'Baja' && socio.status === 'Baja') || 
-        (filter === 'Incidencia' && socio.status === 'Incidencia') || 
-        (filter === 'Ilocalizable' && socio.status === 'Ilocalizable')|| 
-        (filter === 'Incompleto' && socio.is_borrador === true);
-      const matchesPending = !pendingFilter || socio.status === 'Pendiente';
-      
-      const matchesVerifiedThisMonth = !verifiedThisMonthFilter || (
-        socio.status === 'Verificado' &&
-        socio.fecha_verificacion &&
-        new Date(socio.fecha_verificacion).getMonth() === new Date().getMonth() &&
-        new Date(socio.fecha_verificacion).getFullYear() === new Date().getFullYear()
-      );
-      
-      const matchesIncidence = !incidenceFilter || socio.devolucion === false;
-      
-          // Nuevo filtro por rango de fechas (puedes elegir qué campo usar: fecha_alta, fecha_verificacion, etc.)
-    const matchesDateRange = !startDate || !endDate || (
-      new Date(socio.fecha_alta) >= new Date(startDate) && 
-      new Date(socio.fecha_alta) <= new Date(endDate)
-    );
     
-    return matchesSearch && matchesFilter && matchesPending && 
+    // Filtros activos
+    const matchesActiveFilters = activeFilters.every(filter => {
+      const column = availableColumns.find(c => c.id === filter.column);
+      if (!column) return true;
+      
+      const value = socio[filter.column];
+      const filterValue = filter.value;
+      
+      // Manejar casos especiales primero
+      if (column.id === 'fundraiser') {
+        return socio.fundraiser?.id === filterValue;
+      }
+      
+      if (column.type === 'multi-select') {
+        return filterValue.includes(value);
+      }
+      
+      if (column.type === 'boolean') {
+        return value === filterValue;
+      }
+      
+      // Manejar operadores para texto, números y fechas
+      switch(filter.operator) {
+        case 'contains':
+          return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
+        case 'equals':
+          return String(value) === String(filterValue);
+        case 'startsWith':
+          return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
+        case 'endsWith':
+          return String(value || '').toLowerCase().endsWith(String(filterValue || '').toLowerCase());
+        case 'greaterThan':
+          return Number(value) > Number(filterValue);
+        case 'lessThan':
+          return Number(value) < Number(filterValue);
+        case 'greaterThanOrEqual':
+          return Number(value) >= Number(filterValue);
+        case 'lessThanOrEqual':
+          return Number(value) <= Number(filterValue);
+        default:
+          return true;
+      }
+    });
+    
+    // Filtros rápidos
+    const matchesPending = !pendingFilter || socio.status === 'Pendiente';
+    const matchesVerifiedThisMonth = !verifiedThisMonthFilter || (
+      socio.status === 'Verificado' &&
+      socio.fecha_verificacion &&
+      new Date(socio.fecha_verificacion).getMonth() === new Date().getMonth() &&
+      new Date(socio.fecha_verificacion).getFullYear() === new Date().getFullYear()
+    );
+    const matchesIncidence = !incidenceFilter || socio.devolucion === false;
+    const matchesDateRange = !startDate || !endDate || (
+      new Date(socio.fecha_creacion) >= new Date(new Date(startDate).getTime() + 24 * 60 * 60 * 1000) && 
+      new Date(socio.fecha_creacion) <= new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1000)
+    );
+  
+    return matchesSearch && matchesActiveFilters && matchesPending && 
            matchesVerifiedThisMonth && matchesIncidence && matchesDateRange;
-    })
+  });
+};
+
+
+
+
+
+
+
+  // Filtrar y ordenar datos
+  // Filtrar y ordenar datos
+  const filteredData = applyFilters(sociosData)
     .sort((a, b) => {
-      if (orderBy === 'fecha_alta') {
-        const dateA = new Date(a.fecha_alta);
-        const dateB = new Date(b.fecha_alta);
+      if (orderBy === 'fecha_creacion') {
+      
+        const dateA = new Date(a.fecha_creacion);
+        const dateB = new Date(b.fecha_creacion);
         return order === 'asc' ? dateA - dateB : dateB - dateA;
       } else {
         return order === 'asc' 
@@ -371,6 +541,7 @@ edades.forEach(edad => {
           : (a[orderBy] || '') < (b[orderBy] || '') ? 1 : -1;
       }
     });
+
 
   // Paginación
   const handleChangePage = (event, newPage) => {
@@ -392,7 +563,7 @@ edades.forEach(edad => {
   // Columnas para la tabla
   const columns = [
     { id: 'fundraiser', label: 'Comercial', sortable: true },
-    { id: 'fecha_alta', label: 'Fecha Alta', sortable: true },
+    { id: 'fecha_creacion', label: 'Fecha Ingreso', sortable: true },
     { id: 'nombre_socio', label: 'Nombre', sortable: true },
     { id: 'apellido_socio', label: 'Apellidos', sortable: true },
     
@@ -404,7 +575,7 @@ edades.forEach(edad => {
     { id: 'status', label: 'Estado', sortable: true },
     { id: 'no_llamadas', label: 'N° Llamadas', sortable: true },
     { id: 'fecha_verificacion', label: 'Fecha Verificación', sortable: true },
-   
+    { id: 'devolucion', label: 'Devolución', sortable: true },
    
     { id: 'is_borrador', label: 'Incompletos', sortable: true }
     
@@ -423,37 +594,53 @@ edades.forEach(edad => {
   // Cerrar ficha de socio
   const handleCloseSocio = () => {
     setSelectedSocio(null);
+    setEditMode(false); // Resetear el modo edición al cerrar la ficha
   };
 
   // Guardar cambios del socio
   const handleSaveChanges = async () => {
-  if (!selectedSocio) return;
-
-  try {
-    setSaving(true);
-
-    // Copiamos el socio seleccionado y modificamos el fundraiser para enviar solo el ID
-    const payload = {
-      ...selectedSocio,
-      fundraiser: selectedSocio.fundraiser.id,  // Enviamos solo el ID
-    };
-
-    await api.put(`users/socio/${selectedSocio.id}/`, payload);
-
-    // Actualizar los datos en el estado (opcional, si quieres mantener el objeto completo en el estado)
-    const updatedData = sociosData.map(socio => 
-      socio.id === selectedSocio.id ? selectedSocio : socio
-    );
-
-    setSociosData(updatedData);
-    calculateStats(updatedData);
-    handleCloseSocio();
-  } catch (error) {
-    console.error('Error al guardar los cambios:', error);
-  } finally {
-    setSaving(false);
-  }
-};  
+    if (!selectedSocio) return;
+  
+    try {
+      setSaving(true);
+      console.log('selectedSocio', selectedSocio);
+      // Preparar payload omitiendo campos innecesarios
+      const payload = {
+        ...selectedSocio,
+        fundraiser: selectedSocio.fundraiser?.id || null,
+      };
+  
+      let updatedData;
+      
+      if (selectedSocio.id) {
+        // Actualización de socio existente
+        await api.put(`users/socio/${selectedSocio.id}/`, payload);
+        updatedData = sociosData.map(socio => 
+          socio.id === selectedSocio.id ? selectedSocio : socio
+        );
+      } else {
+        // Creación de nuevo socio
+        const response = await api.post('users/socio/', payload);
+        updatedData = [...sociosData, response.data];
+        setSelectedSocio(response.data); // Actualizar con el socio creado
+      }
+  
+      setSociosData(updatedData);
+      calculateStats(updatedData);
+      
+      // Solo cerrar si es un nuevo socio
+      if (!selectedSocio.id) {
+        handleCloseSocio();
+      }
+    } catch (error) {
+      console.error('Error al guardar los cambios:', error);
+      // Puedes mostrar un mensaje de error al usuario aquí
+    } finally {
+      setSaving(false);
+      handleCloseSocio();
+      
+    }
+  };
 
 const handleDeleteSocio = async () => {
   if (!selectedSocio) return;
@@ -495,10 +682,9 @@ const handleDeleteSocio = async () => {
   // Obtener información del comercial
   const getFundraiserInfo = (fundraiserId) => {
     if (!fundraiserId) return 'Sin comercial';
-    console.log(fundraiserId)
+   
     const fundraiser = usersData.find(user => user.id === fundraiserId.id);
-    console.log(usersData)
-    console.log(fundraiser)
+  
     return fundraiser ? `${fundraiser.first_name} ${fundraiser.last_name}` : 'Comercial no encontrado';
   };
 
@@ -668,1126 +854,1341 @@ const handleDeleteSocio = async () => {
     }
   };
 
-  console.log(selectedSocio)
-  console.log(llamadasData)
+  
+// Renderizar el input adecuado para el tipo de filtro
+const renderFilterInput = () => {
+  const column = availableColumns.find(c => c.id === currentFilter.column);
+  if (!column) return null;
+  
+  switch(column.type) {
+    case 'multi-select':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valores</InputLabel>
+          <Select
+            multiple
+            value={currentFilter.value || []}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+            renderValue={(selected) => selected.join(', ')}
+          >
+            {column.options.map((option) => (
+              <MenuItem key={option} value={option}>
+                <Checkbox checked={currentFilter.value?.includes(option) || false} />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    
+    case 'boolean':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valor</InputLabel>
+          <Select
+            value={currentFilter.value}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value === 'true'})}
+          >
+            <MenuItem value={true}>Sí</MenuItem>
+            <MenuItem value={false}>No</MenuItem>
+          </Select>
+        </FormControl>
+      );
+    
+    case 'date':
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          type="date"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          InputLabelProps={{ shrink: true }}
+        />
+      );
+    
+    case 'number':
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+        />
+      );
+    
+    case 'select':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valor</InputLabel>
+          <Select
+            value={currentFilter.value || ''}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          >
+            {column.options.map(option => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    
+    default: // text
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+        />
+      );
+  }
+};
 
-
-  // Función para manejar cambios en los campos editables
-  const handleFieldChange = (field, value) => {
-    setSelectedSocio(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const formatDateTimeForInput = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    // Ajustar para la zona horaria local
-    const timezoneOffset = date.getTimezoneOffset() * 60000;
-    const localDate = new Date(date.getTime() - timezoneOffset);
-    return localDate.toISOString().slice(0, 16);
-  };
+// Renderizar el operador adecuado para el tipo de columna
+const renderOperatorSelect = () => {
+  const column = availableColumns.find(c => c.id === currentFilter.column);
+  if (!column) return null;
+  
+  let operatorType = 'text';
+  if (column.type === 'number') operatorType = 'number';
+  if (column.type === 'date') operatorType = 'date';
+  if (column.type === 'boolean') operatorType = 'boolean';
   
   return (
-    <ProtectedRole requiredRoles={["GESTOR", "JEFE"]}>
-      <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
-        {/* Header */}
-        <Box mb={4}>
-  <Box display="flex" justifyContent="space-between" alignItems="center">
-    <Typography variant="h4" fontWeight={600} mb={1}>Panel de Administración</Typography>
-    
-    {currentUserRole === 'JEFE' ? (
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => router.push('/areaPrivada')}
-        sx={{ mb: 1 }}
-      >
-        Volver
-      </Button>
-    ) : currentUserRole === 'GESTOR' ? (
-      <Button
-        startIcon={<ExitToApp />} // Asegúrate de importar ExitToApp
-        onClick={handleLogout}
-        sx={{ mb: 1, color: 'error.main' }}
-        variant="outlined"
-      >
-        Cerrar sesión
-      </Button>
-    ) : null}
-  </Box>
-  <Typography variant="body1" color="text.secondary">
-    Gestión completa de socios y comerciales
-  </Typography>
-</Box>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Operador</InputLabel>
+          <Select
+            value={currentFilter.operator}
+            onChange={(e) => setCurrentFilter({...currentFilter, operator: e.target.value})}
+            label="Operador"
+          >
+            {operators[operatorType].map(op => (
+            <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  );
+                };
 
-        {/* Filtros y controles */}
-        <Card sx={{ p: 3, mb: 4, boxShadow: '0px 2px 10px rgba(0,0,0,0.05)' }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={3}>
-            <Box display="flex" gap={2} flexWrap="wrap" sx={{ flexGrow: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Buscar socio..."
-                InputProps={{
-                  startAdornment: <Search fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
-                }}
-                sx={{ minWidth: 300 }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              
-              <TextField
-                select
-                size="small"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                sx={{ minWidth: 180 }}
-                InputProps={{
-                  startAdornment: <FilterList fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
-                }}
-              >
-                <MenuItem value="todos">Todos los estados</MenuItem>
-                <MenuItem value="Verificado">Verificado</MenuItem>
-                <MenuItem value="Baja">Baja</MenuItem>
-                <MenuItem value="Ilocalizable">Ilocalizable</MenuItem>
-                <MenuItem value="Incidencia">Incidencia</MenuItem>
-                <MenuItem value="Incompleto">Incompletos</MenuItem>
-              </TextField>
-            </Box>
+
+            // Función para manejar cambios en los campos editables
+            const handleFieldChange = (field, value) => {
+              setSelectedSocio(prev => ({
+                ...prev,
+                [field]: value
+              }));
+            };
+
+            const formatDateTimeForInput = (dateString) => {
+              if (!dateString) return '';
+              const date = new Date(dateString);
+              // Ajustar para la zona horaria local
+              const timezoneOffset = date.getTimezoneOffset() * 60000;
+              const localDate = new Date(date.getTime() - timezoneOffset);
+              return localDate.toISOString().slice(0, 16);
+            };
             
-            <Box display="flex" gap={1}>
-              <Button
-                variant={pendingFilter ? "contained" : "outlined"}
-                startIcon={<Schedule />}
-                onClick={() => setPendingFilter(!pendingFilter)}
-                color={pendingFilter ? "primary" : "inherit"}
-              >
-                Pendientes
-              </Button>
-              <Button
-                variant={verifiedThisMonthFilter ? "contained" : "outlined"}
-                startIcon={<CalendarMonth />}
-                onClick={() => setVerifiedThisMonthFilter(!verifiedThisMonthFilter)}
-                color={verifiedThisMonthFilter ? "primary" : "inherit"}
-              >
-                Verificados este mes
-              </Button>
-
-              {/* Input para fecha de inicio */}
-            <TextField
-              label="Desde"
-              type="date"
-              size="small"
-              variant="outlined"
-              InputLabelProps={{ shrink: true }}
-              value={startDate || ''}
-              onChange={(e) => setStartDate(e.target.value)}
-              sx={{ width: 150 }}
-            />
-            
-            {/* Input para fecha de fin */}
-            <TextField
-              label="Hasta"
-              type="date"
-              size="small"
-              variant="outlined"
-              InputLabelProps={{ shrink: true }}
-              value={endDate || ''}
-              onChange={(e) => setEndDate(e.target.value)}
-              sx={{ width: 150 }}
-              disabled={!startDate}
-              min={startDate} // Opcional: forzar que la fecha fin sea >= inicio
-            />
-               {/* <Button
-                variant={incidenceFilter ? "contained" : "outlined"}
-                startIcon={<Warning />}
-                onClick={() => setIncidenceFilter(!incidenceFilter)}
-                color={incidenceFilter ? "warning" : "inherit"}
-              >
-                Con incidencias
-              </Button> */}
-              
-            </Box>
-          </Box>
-        </Card>
-
-        {/* Tabs para diferentes vistas */}
-        <Tabs 
-          value={tabValue} 
-          onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{ mb: 3 }}
-        >
-          <Tab label="Listado de Socios" />
-          <Tab label="Estadísticas" />
-        </Tabs>
-
-        {/* Contenido según tab seleccionado */}
-        {tabValue === 0 && (
-          <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-            <TableContainer sx={{ maxHeight: 600 }}>
-              <Table stickyHeader aria-label="tabla de socios">
-                <TableHead>
-                  <TableRow>
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.id}
-                        sortDirection={orderBy === column.id ? order : false}
+        return (
+          <ProtectedRole requiredRoles={["GESTOR", "JEFE"]}>
+            <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
+              {/* Header */}
+              <Box mb={4}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h4" fontWeight={600} mb={1}>Panel de Administración</Typography>
+                    
+                    {currentUserRole === 'JEFE' ? (
+                      <Button
+                        startIcon={<ArrowBack />}
+                        onClick={() => router.push('/areaPrivada')}
+                        sx={{ mb: 1 }}
                       >
-                        {column.sortable ? (
-                          <TableSortLabel
-                            active={orderBy === column.id}
-                            direction={orderBy === column.id ? order : 'asc'}
-                            onClick={() => handleRequestSort(column.id)}
-                            IconComponent={order === 'asc' ? ArrowUpward : ArrowDownward}
-                          >
-                            {column.label}
-                          </TableSortLabel>
-                        ) : (
-                          column.label
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow >
-                        <TableCell colSpan={columns.length} align="center">
-                          <CircularProgress />
-                        </TableCell>
-                    </TableRow>
-                  ) : filteredData.length > 0 ? (
-                    filteredData
-                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                      .map((socio) => (
+                        Volver
+                      </Button>
+                    ) : currentUserRole === 'GESTOR' ? (
+                      <Button
+                        startIcon={<ExitToApp />} // Asegúrate de importar ExitToApp
+                        onClick={handleLogout}
+                        sx={{ mb: 1, color: 'error.main' }}
+                        variant="outlined"
+                      >
+                        Cerrar sesión
+                      </Button>
+                    ) : null}
 
+                <Typography variant="body1" color="text.secondary">
+                  Gestión completa de socios y comerciales
+                </Typography>
+                  </Box>
+                  <Button 
+                variant="contained" 
+                startIcon={<Add />}
+                onClick={() => setSelectedSocio({
+                  // Datos iniciales para un nuevo socio
+                  nombre_socio: '',
+                  apellido_socio: '',
+                  telefono_socio: '',
+                  email_socio: '',
+                  status: 'Pendiente',
+                  is_borrador: true,
+                  devolucion: false,
+                  no_llamadas: 0,
+                  // Añade aquí otros campos necesarios con valores por defecto
+                })}
+                sx={{ height: 'fit-content' }}
+              >
+                Nuevo Socio
+              </Button>
+                </Box>
 
-                        <TableRow 
-                          hover 
-                          key={socio.id} 
-                          onClick={() => handleOpenSocio(socio)}
-                          sx={{ 
-                            cursor: 'pointer',
-                            backgroundColor: socio.is_borrador ? '#FFF3E0' : 'inherit', // Naranja claro cuando es borrador
-                            '&:hover': {
-                              backgroundColor: socio.is_borrador ? '#FFE0B2' : '' // Un tono más oscuro al hacer hover
-                            }
-                          }}
-                        >
-                           <TableCell>
-                            {getFundraiserInfo(socio.fundraiser)}
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(socio.fecha_alta)}
-                          </TableCell>
-                          <TableCell>{socio.nombre_socio || 'N/A'}</TableCell>
-                          <TableCell>{socio.apellido_socio || 'N/A'}</TableCell>
-                          <TableCell>{socio.telefono_socio || 'No tiene móvil'}</TableCell>
+               <Card sx={{ p: 3, mb: 4, boxShadow: '0px 2px 10px rgba(0,0,0,0.05)' }}>
+                    {/* Chips de filtros activos */}
+                    {activeFilters.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        {activeFilters.map((filter, index) => {
+                          const column = availableColumns.find(c => c.id === filter.column);
+                          let valueDisplay = filter.value;
                           
+                          if (column?.type === 'multi-select') {
+                            valueDisplay = filter.value.join(', ');
+                          } else if (column?.type === 'boolean') {
+                            valueDisplay = filter.value ? 'Sí' : 'No';
+                          } else if (column?.id === 'fundraiser') {
+                            const user = usersData.find(u => u.id === filter.value);
+                            valueDisplay = user ? `${user.first_name} ${user.last_name}` : filter.value;
+                          }
                           
-                          <TableCell>{socio.ciudad_direccion || 'N/A'}</TableCell>
-                          <TableCell>
-                            {socio.importe ? `€${socio.importe}` : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {socio.periodicidad || 0}
-                          </TableCell>
-                          
-                          <TableCell>
-                          <StatusChip 
-                              label={socio?.status || 'Pendiente'}
-                              color={
-                                socio?.status === 'Verificado' ? 'success' :
-                                socio?.status === 'Ilocalizable' ? 'info' :
-                                socio?.status === 'Baja' ? 'error' : 
-                                'warning' // Para Incidencia, Pendiente y por defecto
-                              }
-                              sx={{
-                                // Sobreescribe los colores del theme con tus HEX
-                                ...(socio?.status === 'Verificado' && { backgroundColor: '#4CAF50' }),
-                                ...(socio?.status === 'Ilocalizable' && { backgroundColor: '#2196F3' }),
-                                ...(socio?.status === 'Baja' && { backgroundColor: '#F44336' }),
-                                ...((!socio?.status || socio?.status === 'Incidencia' || socio?.status === 'Pendiente') && { 
-                                  backgroundColor: socio?.status === 'Pendiente' ? '#3c3c3c' : '#FF9800'
-                                }),
-                                color: 'white',
-                                fontWeight: 'bold'
-                              }}
-                              icon={
-                                socio.status === 'Verificado' ? <CheckCircle fontSize="small" /> :
-                                socio.status === 'Ilocalizable' ? <Info fontSize="small" /> :
-                                socio.status === 'Baja' ? <Error fontSize="small" /> :  // Usamos Error en lugar de Cancel
-                                socio.status === 'Incidencia' ? <Warning fontSize="small" /> :
-                                <Schedule fontSize="small" /> // Ícono para Pendiente
-                              }
+                          return (
+                            <Chip
+                              key={index}
+                              label={`${column?.label || filter.column}: ${valueDisplay}`}
+                              onDelete={() => removeFilter(filter.column)}
+                              color="primary"
+                              size="small"
+                              variant="outlined"
                             />
-                          </TableCell>
-                          <TableCell>
-                            {socio.no_llamadas || 0}
-                          </TableCell>
-                          <TableCell>
-                            {socio.fecha_verificacion ? formatDate(socio.fecha_verificacion) : 'No ha verificado'}
-                          </TableCell>
-                         
-                         
-                          <TableCell>
-                            {socio.is_borrador ? 'Si' : 'No'}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No se encontraron socios
-                      </TableCell>
-                    </TableRow>
+                          );
+                        })}
+                        <Button size="small" onClick={clearAllFilters} sx={{ ml: 1 }}>
+                          Limpiar todo
+                        </Button>
+                      </Box>
+                    )}
+
+                    <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={3}>
+                      {/* Búsqueda general */}
+                      <Box display="flex" gap={2} flexWrap="wrap" sx={{ flexGrow: 1 }}>
+                        <TextField
+                          size="small"
+                          placeholder="Buscar en todos los campos..."
+                          InputProps={{
+                            startAdornment: <Search fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
+                          }}
+                          sx={{ minWidth: 300 }}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </Box>
+
+                      {/* Botones de filtros rápidos */}
+                      <Box display="flex" gap={1} flexWrap="wrap">
+                        <Button
+                          variant={pendingFilter ? "contained" : "outlined"}
+                          startIcon={<Schedule />}
+                          onClick={() => setPendingFilter(!pendingFilter)}
+                          color={pendingFilter ? "primary" : "inherit"}
+                        >
+                          Pendientes
+                        </Button>
+                        <Button
+                          variant={verifiedThisMonthFilter ? "contained" : "outlined"}
+                          startIcon={<CalendarMonth />}
+                          onClick={() => setVerifiedThisMonthFilter(!verifiedThisMonthFilter)}
+                          color={verifiedThisMonthFilter ? "primary" : "inherit"}
+                        >
+                          Verificados este mes
+                        </Button>
+                        <Button
+                          variant={incidenceFilter ? "contained" : "outlined"}
+                          startIcon={<Warning />}
+                          onClick={() => setIncidenceFilter(!incidenceFilter)}
+                          color={incidenceFilter ? "warning" : "inherit"}
+                        >
+                          Con incidencias
+                        </Button>
+                      </Box>
+                    </Box>
+
+                    {/* Filtros avanzados por columnas */}
+                    <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                      {/* Selector de columna */}
+                      <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel>Columna</InputLabel>
+                        <Select
+                          value={currentFilter.column || ''}
+                          onChange={handleFilterColumnChange}
+                          label="Columna"
+                        >
+                          {availableColumns.map((column) => (
+                            <MenuItem key={column.id} value={column.id}>
+                              {column.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* Selector de operador (si es necesario) */}
+                      {currentFilter.column && 
+                        availableColumns.find(c => c.id === currentFilter.column)?.type !== 'multi-select' && 
+                        availableColumns.find(c => c.id === currentFilter.column)?.type !== 'boolean' &&
+                        renderOperatorSelect()}
+
+                      {/* Input de valor según el tipo de columna */}
+                      {currentFilter.column && renderFilterInput()}
+
+                      {/* Botón para añadir filtro */}
+                      {currentFilter.column && (
+                        <Button 
+                          variant="contained" 
+                          onClick={addFilter}
+                          disabled={
+                            !currentFilter.value || 
+                            (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
+                          }
+                          startIcon={<Add />}
+                        >
+                          Añadir filtro
+                        </Button>
+                      )}
+                    </Box>
+
+                    {/* Filtros de fecha */}
+                    <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                      <TextField
+                        label="Desde"
+                        type="date"
+                        size="small"
+                        variant="outlined"
+                        InputLabelProps={{ shrink: true }}
+                        value={startDate || ''}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        sx={{ width: 150 }}
+                      />
+                      <TextField
+                        label="Hasta"
+                        type="date"
+                        size="small"
+                        variant="outlined"
+                        InputLabelProps={{ shrink: true }}
+                        value={endDate || ''}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        sx={{ width: 150 }}
+                        disabled={!startDate}
+                        min={startDate}
+                      />
+                    </Box>
+                  </Card>
+
+                    {/* Tabs para diferentes vistas */}
+                    <Tabs 
+                      value={tabValue} 
+                      onChange={(e, newValue) => setTabValue(newValue)}
+                      sx={{ mb: 3 }}
+                    >
+                      <Tab label="Listado de Socios" />
+                      <Tab label="Estadísticas" />
+                    </Tabs>
+
+                    {/* Contenido según tab seleccionado */}
+                    {tabValue === 0 && (
+                      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                        <TableContainer sx={{ maxHeight: 600 }}>
+                          <Table stickyHeader aria-label="tabla de socios">
+                            <TableHead>
+                              <TableRow>
+                                {columns.map((column) => (
+                                  <TableCell
+                                    key={column.id}
+                                    sortDirection={orderBy === column.id ? order : false}
+                                  >
+                                    {column.sortable ? (
+                                      <TableSortLabel
+                                        active={orderBy === column.id}
+                                        direction={orderBy === column.id ? order : 'asc'}
+                                        onClick={() => handleRequestSort(column.id)}
+                                        IconComponent={order === 'asc' ? ArrowUpward : ArrowDownward}
+                                      >
+                                        {column.label}
+                                      </TableSortLabel>
+                                    ) : (
+                                      column.label
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {loading ? (
+                                <TableRow >
+                                    <TableCell colSpan={columns.length} align="center">
+                                      <CircularProgress />
+                                    </TableCell>
+                                </TableRow>
+                              ) : filteredData.length > 0 ? (
+                                filteredData
+                                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                  .map((socio) => (
+
+
+                                    <TableRow 
+                                      hover 
+                                      key={socio.id} 
+                                      onClick={() => handleOpenSocio(socio)}
+                                      sx={{ 
+                                        cursor: 'pointer',
+                                        backgroundColor: socio.is_borrador ? '#FFF3E0' : 'inherit', // Naranja claro cuando es borrador
+                                        '&:hover': {
+                                          backgroundColor: socio.is_borrador ? '#FFE0B2' : '' // Un tono más oscuro al hacer hover
+                                        }
+                                      }}
+                                    >
+                                      <TableCell>
+                                        {getFundraiserInfo(socio.fundraiser)}
+                                      </TableCell>
+                                      <TableCell>
+                                        {formatDate(socio.fecha_creacion)}
+                                      </TableCell>
+                                      <TableCell>{socio.nombre_socio || 'N/A'}</TableCell>
+                                      <TableCell>{socio.apellido_socio || 'N/A'}</TableCell>
+                                      <TableCell>{socio.telefono_socio || 'No tiene móvil'}</TableCell>
+                                      
+                                      
+                                      <TableCell>{socio.ciudad_direccion || 'N/A'}</TableCell>
+                                      <TableCell>
+                                        {socio.importe ? `€${socio.importe}` : 'N/A'}
+                                      </TableCell>
+                                      <TableCell>
+                                        {socio.periodicidad || 0}
+                                      </TableCell>
+                                      
+                                      <TableCell>
+                                      <StatusChip 
+                                          label={socio?.status || 'Pendiente'}
+                                          color={
+                                            socio?.status === 'Verificado' ? 'success' :
+                                            socio?.status === 'Ilocalizable' ? 'info' :
+                                            socio?.status === 'Baja' ? 'error' : 
+                                            'warning' // Para Incidencia, Pendiente y por defecto
+                                          }
+                                          sx={{
+                                            // Sobreescribe los colores del theme con tus HEX
+                                            ...(socio?.status === 'Verificado' && { backgroundColor: '#4CAF50' }),
+                                            ...(socio?.status === 'Ilocalizable' && { backgroundColor: '#2196F3' }),
+                                            ...(socio?.status === 'Baja' && { backgroundColor: '#F44336' }),
+                                            ...((!socio?.status || socio?.status === 'Incidencia' || socio?.status === 'Pendiente') && { 
+                                              backgroundColor: socio?.status === 'Pendiente' ? '#3c3c3c' : '#FF9800'
+                                            }),
+                                            color: 'white',
+                                            fontWeight: 'bold'
+                                          }}
+                                          icon={
+                                            socio.status === 'Verificado' ? <CheckCircle fontSize="small" /> :
+                                            socio.status === 'Ilocalizable' ? <Info fontSize="small" /> :
+                                            socio.status === 'Baja' ? <Error fontSize="small" /> :  // Usamos Error en lugar de Cancel
+                                            socio.status === 'Incidencia' ? <Warning fontSize="small" /> :
+                                            <Schedule fontSize="small" /> // Ícono para Pendiente
+                                          }
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        {socio.no_llamadas || 0}
+                                      </TableCell>
+                                      <TableCell>
+                                        {socio.fecha_verificacion ? formatDate(socio.fecha_verificacion) : ''}
+                                      </TableCell>
+                                      <TableCell>
+                                          <Chip 
+                                            label={socio.devolucion ? 'Sí' : 'No'}
+                                            sx={{
+                                              backgroundColor: socio.devolucion ? red[500] : blue[500],
+                                              color: 'white',
+                                              fontWeight: 'bold'
+                                            }}
+                                          />
+                                        </TableCell>
+                                                                
+                                      <TableCell>
+                                      <Chip 
+                                            label={socio.is_borrador ? 'Si' : 'No'}
+                                            sx={{
+                                              backgroundColor: socio.is_borrador ? red[500] : blue[500],
+                                              color: 'white',
+                                              fontWeight: 'bold'
+                                            }}
+                                          />
+                                        
+                                      </TableCell>
+                                    </TableRow>
+                                  ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={columns.length} align="center">
+                                    No se encontraron socios
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        <TablePagination
+                          rowsPerPageOptions={[10, 25, 50]}
+                          component="div"
+                          count={filteredData.length}
+                          rowsPerPage={rowsPerPage}
+                          page={page}
+                          onPageChange={handleChangePage}
+                          onRowsPerPageChange={handleChangeRowsPerPage}
+                          labelRowsPerPage="Filas por página:"
+                        />
+                      </Paper>
+                    )}
+
+                  {tabValue === 1 && stats && (
+                    <Box>
+                      <Grid container spacing={3} mb={4}>
+                        <Grid item xs={12} md={3}>
+                          <StatCard 
+                            icon={<PeopleAlt color="primary" />}
+                            title="Total socios"
+                            value={stats.total_socios}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <StatCard 
+                            icon={<CheckCircle color="success" />}
+                            title="Socios activos"
+                            value={stats.socios_activos}
+                            subtext={`${stats.porcentaje_activos}%`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <StatCard 
+                            icon={<CalendarMonth color="info" />}
+                            title="Verificados este mes"
+                            value={stats.socios_verificados_mes}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <StatCard 
+                            icon={<Warning color="warning" />}
+                            title="Con incidencias"
+                            value={stats.socios_con_incidencia}
+                            subtext={`${Math.round((stats.socios_con_incidencia / stats.total_socios) * 100)}%`}
+                          />
+                        </Grid>
+                      </Grid>
+
+                      <Card sx={{ p: 3, mb: 4 }}>
+                        <Typography variant="h6" mb={3}>Distribución por género</Typography>
+                        <Grid container spacing={3}>
+                          <Grid item xs={12} md={6}>
+                            <Box display="flex" alignItems="center" mb={2}>
+                              <Box width={120}>
+                                <Chip label="Hombres" color="primary" />
+                              </Box>
+                              <Box flexGrow={1} px={2}>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={(stats.genero.masculino / stats.total_socios) * 100}
+                                  color="primary"
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                              <Box width={60} textAlign="right">
+                                <Typography>
+                                  {stats.genero.masculino} ({Math.round((stats.genero.masculino / stats.total_socios) * 100)}%)
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
+                            <Box display="flex" alignItems="center">
+                              <Box width={120}>
+                                <Chip label="Mujeres" color="secondary" />
+                              </Box>
+                              <Box flexGrow={1} px={2}>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={(stats.genero.femenino / stats.total_socios) * 100}
+                                  color="secondary"
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                              <Box width={60} textAlign="right">
+                                <Typography>
+                                  {stats.genero.femenino} ({Math.round((stats.genero.femenino / stats.total_socios) * 100)}%)
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Grid>
+                          
+                          <Grid item xs={12} md={6}>
+                            <Card variant="outlined" sx={{ p: 2 }}>
+                              <Typography variant="subtitle1" gutterBottom>Resumen estadístico</Typography>
+                              <Box>
+                                <Typography>Edad promedio: <strong>{stats.edad_promedio} años</strong></Typography>
+                                <Typography>Socios pendientes: <strong>{stats.socios_pendientes}</strong></Typography>
+                                <Typography>Ratio activos/inactivos: <strong>{stats.socios_activos}:{stats.total_socios - stats.socios_activos}</strong></Typography>
+                              </Box>
+                            </Card>
+                          </Grid>
+                        </Grid>
+                      </Card>
+                    </Box>
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
-              component="div"
-              count={filteredData.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="Filas por página:"
-            />
-          </Paper>
-        )}
+                          {/* Dialog con ficha de socio */}
+                            {/* Dialog con ficha de socio */}
+                            <Dialog 
+                            open={!!selectedSocio} 
+                            onClose={handleCloseSocio}
+                            fullWidth
+                            maxWidth="md"
+                            scroll="paper"
+                          >
+                            <DialogTitle>
+                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                  <Typography variant="h6">
+                                    {selectedSocio?.id ? `${selectedSocio.nombre_socio} ${selectedSocio.apellido_socio}` : 'Nuevo Socio'}
+                                    {selectedSocio?.id && (
+                                      <Typography variant="body2" color="text.secondary">
+                                        ID: {selectedSocio.id}
+                                      </Typography>
+                                    )}
+                                  </Typography>
+                                
+                                <Box>
+                                {selectedSocio?.id && (
+                                <Button 
+                                  onClick={handleDeleteSocio} 
+                                  color="error"
+                                  disabled={saving}
+                                  startIcon={<Delete />}
+                                  sx={{ mr: 3 }}
+                                  variant="outlined"
+                                >
+                                  {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
+                                </Button>
+                              )}
+                                  {fichaTab === 0 && (
 
-{tabValue === 1 && stats && (
-  <Box>
-    <Grid container spacing={3} mb={4}>
-      <Grid item xs={12} md={3}>
-        <StatCard 
-          icon={<PeopleAlt color="primary" />}
-          title="Total socios"
-          value={stats.total_socios}
-        />
-      </Grid>
-      <Grid item xs={12} md={3}>
-        <StatCard 
-          icon={<CheckCircle color="success" />}
-          title="Socios activos"
-          value={stats.socios_activos}
-          subtext={`${stats.porcentaje_activos}%`}
-        />
-      </Grid>
-      <Grid item xs={12} md={3}>
-        <StatCard 
-          icon={<CalendarMonth color="info" />}
-          title="Verificados este mes"
-          value={stats.socios_verificados_mes}
-        />
-      </Grid>
-      <Grid item xs={12} md={3}>
-        <StatCard 
-          icon={<Warning color="warning" />}
-          title="Con incidencias"
-          value={stats.socios_con_incidencia}
-          subtext={`${Math.round((stats.socios_con_incidencia / stats.total_socios) * 100)}%`}
-        />
-      </Grid>
-    </Grid>
+                                    
+                                    <Button
+                                      startIcon={editMode ? <LockOpen /> : <Lock />}
+                                      onClick={() => setEditMode(!editMode)}
+                                      variant={editMode ? "contained" : "outlined"}
+                                      color={editMode ? "primary" : "inherit"}
+                                      sx={{ mr: 2 }}
+                                    >
+                                      {editMode ? "Editando" : "Editar"}
+                                    </Button>
+                                  )}
+                                  <IconButton onClick={handleCloseSocio}>
+                                    <Close />
+                                  </IconButton>
+                                </Box>
+                              </Box>
+                            </DialogTitle>
+                            <DialogContent dividers>
+                              {selectedSocio && (
+                                <Box>
+                                  <Tabs 
+                                    value={fichaTab} 
+                                    onChange={(e, newValue) => setFichaTab(newValue)}
+                                    sx={{ mb: 3 }}
+                                  >
+                                    <Tab label="Información General" />
+                                    <Tab label="Estado" />
+                                    <Tab label="Llamadas" />
+                                  </Tabs>
 
-    <Card sx={{ p: 3, mb: 4 }}>
-      <Typography variant="h6" mb={3}>Distribución por género</Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Box display="flex" alignItems="center" mb={2}>
-            <Box width={120}>
-              <Chip label="Hombres" color="primary" />
-            </Box>
-            <Box flexGrow={1} px={2}>
-              <LinearProgress 
-                variant="determinate" 
-                value={(stats.genero.masculino / stats.total_socios) * 100}
-                color="primary"
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
-            <Box width={60} textAlign="right">
-              <Typography>
-                {stats.genero.masculino} ({Math.round((stats.genero.masculino / stats.total_socios) * 100)}%)
-              </Typography>
-            </Box>
-          </Box>
-          
-          <Box display="flex" alignItems="center">
-            <Box width={120}>
-              <Chip label="Mujeres" color="secondary" />
-            </Box>
-            <Box flexGrow={1} px={2}>
-              <LinearProgress 
-                variant="determinate" 
-                value={(stats.genero.femenino / stats.total_socios) * 100}
-                color="secondary"
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
-            <Box width={60} textAlign="right">
-              <Typography>
-                {stats.genero.femenino} ({Math.round((stats.genero.femenino / stats.total_socios) * 100)}%)
-              </Typography>
-            </Box>
-          </Box>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>Resumen estadístico</Typography>
-            <Box>
-              <Typography>Edad promedio: <strong>{stats.edad_promedio} años</strong></Typography>
-              <Typography>Socios pendientes: <strong>{stats.socios_pendientes}</strong></Typography>
-              <Typography>Ratio activos/inactivos: <strong>{stats.socios_activos}:{stats.total_socios - stats.socios_activos}</strong></Typography>
-            </Box>
-          </Card>
-        </Grid>
-      </Grid>
-    </Card>
-  </Box>
-)}
-        {/* Dialog con ficha de socio */}
-          {/* Dialog con ficha de socio */}
-          <Dialog 
-          open={!!selectedSocio} 
-          onClose={handleCloseSocio}
-          fullWidth
-          maxWidth="md"
-          scroll="paper"
-        >
-          <DialogTitle>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">
-                {selectedSocio?.nombre_socio} {selectedSocio?.apellido_socio}
-                <Typography variant="body2" color="text.secondary">
-                  ID: {selectedSocio?.id}
-                </Typography>
-              </Typography>
-              
-              <Box>
-              <Button 
-      onClick={handleDeleteSocio} 
-      color="error"
-      disabled={saving}
-      startIcon={<Delete />}
-      sx={{ mr: 3 , }}
-      variant="outlined"
-    >
-      {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
-    </Button>
-                {fichaTab === 0 && (
+                                  {fichaTab === 0 && (
+                    <Grid container spacing={3}>
+                      {/* Columna izquierda - Información Personal */}
+                      <Grid item xs={12} md={6}>
+                        <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            fontWeight: 'bold',
+                            borderBottom: '2px solid',
+                            borderColor: 'primary.main',
+                            pb: 1,
+                            mb: 2
+                          }}>
+                            Información Personal
+                          </Typography>
+                          
+                          <Grid container spacing={2}>
+                            {/* Nombre */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Nombre
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.nombre_socio || ''}
+                                  onChange={(e) => handleFieldChange('nombre_socio', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.nombre_socio || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-                  
-                  <Button
-                    startIcon={editMode ? <LockOpen /> : <Lock />}
-                    onClick={() => setEditMode(!editMode)}
-                    variant={editMode ? "contained" : "outlined"}
-                    color={editMode ? "primary" : "inherit"}
-                    sx={{ mr: 2 }}
-                  >
-                    {editMode ? "Editando" : "Editar"}
-                  </Button>
-                )}
-                <IconButton onClick={handleCloseSocio}>
-                  <Close />
-                </IconButton>
-              </Box>
-            </Box>
-          </DialogTitle>
-          <DialogContent dividers>
-            {selectedSocio && (
-              <Box>
-                <Tabs 
-                  value={fichaTab} 
-                  onChange={(e, newValue) => setFichaTab(newValue)}
-                  sx={{ mb: 3 }}
-                >
-                  <Tab label="Información General" />
-                  <Tab label="Estado" />
-                  <Tab label="Llamadas" />
-                </Tabs>
+                            {/* Apellidos */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Apellidos
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.apellido_socio || ''}
+                                  onChange={(e) => handleFieldChange('apellido_socio', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.apellido_socio || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-                {fichaTab === 0 && (
-  <Grid container spacing={3}>
-    {/* Columna izquierda - Información Personal */}
-    <Grid item xs={12} md={6}>
-      <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          fontWeight: 'bold',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          pb: 1,
-          mb: 2
-        }}>
-          Información Personal
-        </Typography>
-        
-        <Grid container spacing={2}>
-          {/* Nombre */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Nombre
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.nombre_socio || ''}
-                onChange={(e) => handleFieldChange('nombre_socio', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.nombre_socio || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Género */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Género
+                              </InputLabel>
+                              {editMode ? (
+                                <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                                  <Select
+                                    value={selectedSocio.genero_socio || ''}
+                                    onChange={(e) => handleFieldChange('genero_socio', e.target.value)}
+                                    variant="outlined"
+                                  >
+                                    <MenuItem value="masculino">Hombre</MenuItem>
+                                    <MenuItem value="femenino">Mujer</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.genero_socio === 'masculino' ? 'Hombre' : 
+                                  selectedSocio.genero_socio === 'femenino' ? 'Mujer' : 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Apellidos */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Apellidos
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.apellido_socio || ''}
-                onChange={(e) => handleFieldChange('apellido_socio', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.apellido_socio || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Edad */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Edad
+                              </InputLabel>
+                              <Typography variant="body1" sx={{ mt: 1 }}>
+                                {calcularEdad(selectedSocio.fecha_nacimiento)} años
+                              </Typography>
+                            </Grid>
 
-          {/* Género */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Género
-            </InputLabel>
-            {editMode ? (
-              <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                <Select
-                  value={selectedSocio.genero_socio || ''}
-                  onChange={(e) => handleFieldChange('genero_socio', e.target.value)}
-                  variant="outlined"
-                >
-                  <MenuItem value="masculino">Hombre</MenuItem>
-                  <MenuItem value="femenino">Mujer</MenuItem>
-                </Select>
-              </FormControl>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.genero_socio === 'masculino' ? 'Hombre' : 
-                 selectedSocio.genero_socio === 'femenino' ? 'Mujer' : 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Fecha Nacimiento */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Fecha Nacimiento
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="date"
+                                  variant="outlined"
+                                  InputLabelProps={{ shrink: true }}
+                                  value={selectedSocio.fecha_nacimiento?.split('T')[0] || ''}
+                                  onChange={(e) => handleFieldChange('fecha_nacimiento', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {formatShortDate(selectedSocio.fecha_nacimiento)}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Edad */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Edad
-            </InputLabel>
-            <Typography variant="body1" sx={{ mt: 1 }}>
-              {calcularEdad(selectedSocio.fecha_nacimiento)} años
-            </Typography>
-          </Grid>
+                            {/* Fecha Alta */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Fecha Alta Aladina
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="date"
+                                  variant="outlined"
+                                  InputLabelProps={{ shrink: true }}
+                                  value={selectedSocio.fecha_alta_real?.split('T')[0] || ''}
+                                  onChange={(e) => handleFieldChange('fecha_alta_real', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.fecha_alta_real ? 
+                                    formatShortDate(selectedSocio.fecha_alta_real) : 
+                                    "N/A"}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Fecha Nacimiento */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Fecha Nacimiento
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                variant="outlined"
-                InputLabelProps={{ shrink: true }}
-                value={selectedSocio.fecha_nacimiento?.split('T')[0] || ''}
-                onChange={(e) => handleFieldChange('fecha_nacimiento', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {formatShortDate(selectedSocio.fecha_nacimiento)}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Identificación */}
+                            <Grid item xs={12}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Identificación
+                              </InputLabel>
+                              {editMode ? (
+                                <Box display="flex" gap={1} sx={{ mt: 1 }}>
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Tipo</InputLabel>
+                                    <Select
+                                      value={selectedSocio.tipo_identificacion_socio || ''}
+                                      onChange={(e) => handleFieldChange('tipo_identificacion_socio', e.target.value)}
+                                      label="Tipo"
+                                      variant="outlined"
+                                    >
+                                      <MenuItem value="DNI">DNI</MenuItem>
+                                      <MenuItem value="NIE">NIE</MenuItem>
+                                      <MenuItem value="Pasaporte">Pasaporte</MenuItem>
+                                      <MenuItem value="CIF">CIF</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                  <TextField
+                                    fullWidth
+                                    size="small"
+                                    variant="outlined"
+                                    value={selectedSocio.numero_identificacion_socio || ''}
+                                    onChange={(e) => handleFieldChange('numero_identificacion_socio', e.target.value)}
+                                  />
+                                </Box>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio?.tipo_identificacion_socio || 'N/A'}: {selectedSocio.numero_identificacion_socio || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Fecha Alta */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Fecha Alta
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                variant="outlined"
-                InputLabelProps={{ shrink: true }}
-                value={selectedSocio.fecha_alta_real?.split('T')[0] || ''}
-                onChange={(e) => handleFieldChange('fecha_alta_real', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.fecha_alta_real ? 
-                  formatShortDate(selectedSocio.fecha_alta_real) : 
-                  "N/A"}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Contacto */}
+                            <Grid item xs={12}>
+                              <Typography variant="subtitle1" sx={{ 
+                                fontWeight: 'bold',
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                                pb: 1,
+                                mt: 2,
+                                mb: 2
+                              }}>
+                                Contacto
+                              </Typography>
+                            </Grid>
 
-          {/* Identificación */}
-          <Grid item xs={12}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Identificación
-            </InputLabel>
-            {editMode ? (
-              <Box display="flex" gap={1} sx={{ mt: 1 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Tipo</InputLabel>
-                  <Select
-                    value={selectedSocio.tipo_identificacion_socio || ''}
-                    onChange={(e) => handleFieldChange('tipo_identificacion_socio', e.target.value)}
-                    label="Tipo"
-                    variant="outlined"
-                  >
-                    <MenuItem value="DNI">DNI</MenuItem>
-                    <MenuItem value="NIE">NIE</MenuItem>
-                    <MenuItem value="Pasaporte">Pasaporte</MenuItem>
-                    <MenuItem value="CIF">CIF</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  value={selectedSocio.numero_identificacion_socio || ''}
-                  onChange={(e) => handleFieldChange('numero_identificacion_socio', e.target.value)}
-                />
-              </Box>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio?.tipo_identificacion_socio || 'N/A'}: {selectedSocio.numero_identificacion_socio || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Teléfono */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Teléfono
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.telefono_socio || ''}
+                                  onChange={(e) => handleFieldChange('telefono_socio', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.telefono_socio || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Contacto */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ 
-              fontWeight: 'bold',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              pb: 1,
-              mt: 2,
-              mb: 2
-            }}>
-              Contacto
-            </Typography>
-          </Grid>
+                            {/* Email */}
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Email
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.email_socio || ''}
+                                  onChange={(e) => handleFieldChange('email_socio', e.target.value)}
+                                  type="email"
+                                  error={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio)}
+                                  helperText={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio) 
+                                    ? "Formato de email inválido" 
+                                    : ""}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.email_socio || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Teléfono */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Teléfono
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.telefono_socio || ''}
-                onChange={(e) => handleFieldChange('telefono_socio', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.telefono_socio || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            {/* Estado Datos */}
+                            <Grid item xs={12}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Estado de Datos
+                              </InputLabel>
+                              {editMode ? (
+                                <Box display="flex" alignItems="center" sx={{ mt: 1 }}>
+                                  <Switch
+                                    checked={!selectedSocio.is_borrador}
+                                    onChange={(e) => handleFieldChange('is_borrador', !e.target.checked)}
+                                    color="primary"
+                                  />
+                                  <Typography ml={1} variant="body1">
+                                    {selectedSocio.is_borrador ? "Incompleto" : "Completo"}
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Box display="flex" alignItems="center" sx={{ mt: 1 }}>
+                                  {selectedSocio.is_borrador ? (
+                                    <Cancel color="error" fontSize="small" />
+                                  ) : (
+                                    <CheckCircle color="success" fontSize="small" />
+                                  )}
+                                  <Typography ml={1} variant="body1">
+                                    {selectedSocio.is_borrador ? "Incompleto" : "Completo"}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Grid>
+                          </Grid>
+                        </Card>
 
-          {/* Email */}
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Email
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.email_socio || ''}
-                onChange={(e) => handleFieldChange('email_socio', e.target.value)}
-                type="email"
-                error={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio)}
-                helperText={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio) 
-                  ? "Formato de email inválido" 
-                  : ""}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.email_socio || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                        {/* Dirección */}
+                        <Card variant="outlined" sx={{ p: 3 }}>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            fontWeight: 'bold',
+                            borderBottom: '2px solid',
+                            borderColor: 'primary.main',
+                            pb: 1,
+                            mb: 2
+                          }}>
+                            Dirección
+                          </Typography>
+                          
+                          <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Dirección
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.via_principal || ''}
+                                  onChange={(e) => handleFieldChange('via_principal', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.via_principal || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          {/* Estado Datos */}
-          <Grid item xs={12}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Estado de Datos
-            </InputLabel>
-            {editMode ? (
-              <Box display="flex" alignItems="center" sx={{ mt: 1 }}>
-                <Switch
-                  checked={!selectedSocio.is_borrador}
-                  onChange={(e) => handleFieldChange('is_borrador', !e.target.checked)}
-                  color="primary"
-                />
-                <Typography ml={1} variant="body1">
-                  {selectedSocio.is_borrador ? "Incompleto" : "Completo"}
-                </Typography>
-              </Box>
-            ) : (
-              <Box display="flex" alignItems="center" sx={{ mt: 1 }}>
-                {selectedSocio.is_borrador ? (
-                  <Cancel color="error" fontSize="small" />
-                ) : (
-                  <CheckCircle color="success" fontSize="small" />
-                )}
-                <Typography ml={1} variant="body1">
-                  {selectedSocio.is_borrador ? "Incompleto" : "Completo"}
-                </Typography>
-              </Box>
-            )}
-          </Grid>
-        </Grid>
-      </Card>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Código Postal
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.cp_direccion || ''}
+                                  onChange={(e) => handleFieldChange('cp_direccion', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.cp_direccion || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-      {/* Dirección */}
-      <Card variant="outlined" sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          fontWeight: 'bold',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          pb: 1,
-          mb: 2
-        }}>
-          Dirección
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Dirección
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.via_principal || ''}
-                onChange={(e) => handleFieldChange('via_principal', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.via_principal || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Ciudad
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.ciudad_direccion || ''}
+                                  onChange={(e) => handleFieldChange('ciudad_direccion', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.ciudad_direccion || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Código Postal
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.cp_direccion || ''}
-                onChange={(e) => handleFieldChange('cp_direccion', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.cp_direccion || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Provincia
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.estado_provincia || ''}
+                                  onChange={(e) => handleFieldChange('estado_provincia', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.estado_provincia || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Ciudad
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.ciudad_direccion || ''}
-                onChange={(e) => handleFieldChange('ciudad_direccion', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.ciudad_direccion || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                      {/* Columna derecha - Información de Registro y Pago */}
+                      <Grid item xs={12} md={6}>
+                        {/* Información de Registro */}
+                        <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            fontWeight: 'bold',
+                            borderBottom: '2px solid',
+                            borderColor: 'primary.main',
+                            pb: 1,
+                            mb: 2
+                          }}>
+                            Información de Registro
+                          </Typography>
+                          
+                          <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Fecha Ingreso
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="datetime-local"
+                                  variant="outlined"
+                                  value={selectedSocio.fecha_creacion ? formatDateTimeForInput(selectedSocio.fecha_creacion): ''}
+                                  onChange={(e) => handleFieldChange('fecha_creacion', e.target.value)}
+                                  InputLabelProps={{ shrink: true }}
+                                  inputProps={{ max: new Date().toISOString().slice(0, 16) }}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {formatDate(selectedSocio.fecha_creacion)}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Provincia
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.estado_provincia || ''}
-                onChange={(e) => handleFieldChange('estado_provincia', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.estado_provincia || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
-        </Grid>
-      </Card>
-    </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Estado
+                              </InputLabel>
+                              <Box sx={{ mt: 1 }}>
+                                <StatusChip
+                                  label={selectedSocio.status || 'Pendiente'}
+                                  sx={{
+                                    backgroundColor: (() => {
+                                      switch(selectedSocio?.status) {
+                                        case 'Verificado': return '#4CAF50';
+                                        case 'Ilocalizable': return '#2196F3';
+                                        case 'Baja': return '#F44336';
+                                        case 'Incidencia': return '#FF9800';
+                                        case 'Pendiente': return '#3c3c3c';
+                                        default: return '#FFC107';
+                                      }
+                                    })(),
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                  }}
+                                />
+                              </Box>
+                            </Grid>
 
-    {/* Columna derecha - Información de Registro y Pago */}
-    <Grid item xs={12} md={6}>
-      {/* Información de Registro */}
-      <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          fontWeight: 'bold',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          pb: 1,
-          mb: 2
-        }}>
-          Información de Registro
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Fecha Registro
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                type="datetime-local"
-                variant="outlined"
-                value={formatDateTimeForInput(selectedSocio.fecha_alta)}
-                onChange={(e) => handleFieldChange('fecha_alta', e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ max: new Date().toISOString().slice(0, 16) }}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {formatDate(selectedSocio.fecha_alta)}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                N° Llamadas
+                              </InputLabel>
+                              <Typography variant="body1" sx={{ mt: 1 }}>
+                                {selectedSocio.no_llamadas || 0}
+                              </Typography>
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Estado
-            </InputLabel>
-            <Box sx={{ mt: 1 }}>
-              <StatusChip
-                label={selectedSocio.status || 'Pendiente'}
-                sx={{
-                  backgroundColor: (() => {
-                    switch(selectedSocio?.status) {
-                      case 'Verificado': return '#4CAF50';
-                      case 'Ilocalizable': return '#2196F3';
-                      case 'Baja': return '#F44336';
-                      case 'Incidencia': return '#FF9800';
-                      case 'Pendiente': return '#3c3c3c';
-                      default: return '#FFC107';
-                    }
-                  })(),
-                  color: 'white',
-                  fontWeight: 'bold',
-                }}
-              />
-            </Box>
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Fecha Verificación
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="datetime-local"
+                                  variant="outlined"
+                                  value={selectedSocio.fecha_verificacion ? 
+                                    formatDateTimeForInput(selectedSocio.fecha_verificacion) : ''}
+                                  onChange={(e) => {
+                                    const selectedDateTime = new Date(e.target.value);
+                                    const now = new Date();
+                                    
+                                    if (selectedDateTime > now) {
+                                      alert("No puedes seleccionar una fecha/hora futura");
+                                      return;
+                                    }
+                                    
+                                    handleFieldChange('fecha_verificacion', e.target.value + ':00.000Z');
+                                  }}
+                                  InputLabelProps={{ shrink: true }}
+                                  inputProps={{ max: new Date().toISOString().slice(0, 16) }}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.fecha_verificacion ? 
+                                    formatDateTimeForInput(selectedSocio.fecha_verificacion) : 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              N° Llamadas
-            </InputLabel>
-            <Typography variant="body1" sx={{ mt: 1 }}>
-              {selectedSocio.no_llamadas || 0}
-            </Typography>
-          </Grid>
+                            <Grid item xs={12}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Comercial
+                              </InputLabel>
+                              {editMode ? (
+                                <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                                  <InputLabel>Comercial</InputLabel>
+                                  <Select
+                                    value={selectedSocio.fundraiser?.id || ''}
+                                    onChange={(e) => handleFieldChange('fundraiser', usersData.find(u => u.id === e.target.value))}
+                                    label="Comercial"
+                                    variant="outlined"
+                                  >
+                                    {usersData.filter(u => u.role === 'COMERCIAL').map(user => (
+                                      <MenuItem key={user.id} value={user.id}>
+                                        {user.first_name} {user.last_name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {getFundraiserInfo(selectedSocio.fundraiser)}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Fecha Verificación
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                type="datetime-local"
-                variant="outlined"
-                value={selectedSocio.fecha_verificacion ? 
-                  formatDateTimeForInput(selectedSocio.fecha_verificacion) : ''}
-                onChange={(e) => {
-                  const selectedDateTime = new Date(e.target.value);
-                  const now = new Date();
-                  
-                  if (selectedDateTime > now) {
-                    alert("No puedes seleccionar una fecha/hora futura");
-                    return;
-                  }
-                  
-                  handleFieldChange('fecha_verificacion', e.target.value + ':00.000Z');
-                }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ max: new Date().toISOString().slice(0, 16) }}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.fecha_verificacion ? 
-                  formatDateTimeForInput(selectedSocio.fecha_verificacion) : 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Canal Captación
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.primer_canal_captacion || ''}
+                                  onChange={(e) => handleFieldChange('primer_canal_captacion', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.primer_canal_captacion || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={12}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Comercial
-            </InputLabel>
-            {editMode ? (
-              <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                <InputLabel>Comercial</InputLabel>
-                <Select
-                  value={selectedSocio.fundraiser?.id || ''}
-                  onChange={(e) => handleFieldChange('fundraiser', usersData.find(u => u.id === e.target.value))}
-                  label="Comercial"
-                  variant="outlined"
-                >
-                  {usersData.filter(u => u.role === 'COMERCIAL').map(user => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.first_name} {user.last_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {getFundraiserInfo(selectedSocio.fundraiser)}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Canal Entrada
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.canal_entrada || ''}
+                                  onChange={(e) => handleFieldChange('canal_entrada', e.target.value)}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.canal_entrada || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
+                          </Grid>
+                        </Card>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Canal Captación
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.primer_canal_captacion || ''}
-                onChange={(e) => handleFieldChange('primer_canal_captacion', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.primer_canal_captacion || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                        {/* Información de Pago */}
+                        <Card variant="outlined" sx={{ p: 3 }}>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            fontWeight: 'bold',
+                            borderBottom: '2px solid',
+                            borderColor: 'primary.main',
+                            pb: 1,
+                            mb: 2
+                          }}>
+                            Información de Pago
+                          </Typography>
+                          
+                          <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Importe
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="number"
+                                  variant="outlined"
+                                  value={selectedSocio.importe || ''}
+                                  onChange={(e) => handleFieldChange('importe', e.target.value)}
+                                  InputProps={{
+                                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                                  }}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.importe ? `€${selectedSocio.importe}` : 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Canal Entrada
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.canal_entrada || ''}
-                onChange={(e) => handleFieldChange('canal_entrada', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.canal_entrada || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
-        </Grid>
-      </Card>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Periodicidad
+                              </InputLabel>
+                              {editMode ? (
+                                <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                                  <InputLabel>Periodicidad</InputLabel>
+                                  <Select
+                                    value={selectedSocio.periodicidad || ''}
+                                    onChange={(e) => handleFieldChange('periodicidad', e.target.value)}
+                                    label="Periodicidad"
+                                    variant="outlined"
+                                  >
+                                    <MenuItem value="Mensual">Mensual</MenuItem>
+                                    <MenuItem value="Trimestral">Trimestral</MenuItem>
+                                    <MenuItem value="Anual">Anual</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.periodicidad || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-      {/* Información de Pago */}
-      <Card variant="outlined" sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          fontWeight: 'bold',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          pb: 1,
-          mb: 2
-        }}>
-          Información de Pago
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Importe
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                type="number"
-                variant="outlined"
-                value={selectedSocio.importe || ''}
-                onChange={(e) => handleFieldChange('importe', e.target.value)}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                }}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.importe ? `€${selectedSocio.importe}` : 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Medio Pago
+                              </InputLabel>
+                              {editMode ? (
+                                <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                                  <InputLabel>Medio Pago</InputLabel>
+                                  <Select
+                                    value={selectedSocio.medio_pago || ''}
+                                    onChange={(e) => handleFieldChange('medio_pago', e.target.value)}
+                                    label="Medio Pago"
+                                    variant="outlined"
+                                  >
+                                    <MenuItem value="Tarjeta">Tarjeta</MenuItem>
+                                    <MenuItem value="Domiciliación">Domiciliación</MenuItem>
+                                    <MenuItem value="Transferencia">Transferencia</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.medio_pago || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Periodicidad
-            </InputLabel>
-            {editMode ? (
-              <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                <InputLabel>Periodicidad</InputLabel>
-                <Select
-                  value={selectedSocio.periodicidad || ''}
-                  onChange={(e) => handleFieldChange('periodicidad', e.target.value)}
-                  label="Periodicidad"
-                  variant="outlined"
-                >
-                  <MenuItem value="Mensual">Mensual</MenuItem>
-                  <MenuItem value="Trimestral">Trimestral</MenuItem>
-                  <MenuItem value="Anual">Anual</MenuItem>
-                </Select>
-              </FormControl>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.periodicidad || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
+                            <Grid item xs={6}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                Tipo Pago
+                              </InputLabel>
+                              {editMode ? (
+                                <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                                  <InputLabel>Tipo Pago</InputLabel>
+                                  <Select
+                                    value={selectedSocio.tipo_pago || ''}
+                                    onChange={(e) => handleFieldChange('tipo_pago', e.target.value)}
+                                    label="Tipo Pago"
+                                    variant="outlined"
+                                  >
+                                    <MenuItem value="Cuota">Cuota</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.tipo_pago || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
 
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Medio Pago
-            </InputLabel>
-            {editMode ? (
-              <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                <InputLabel>Medio Pago</InputLabel>
-                <Select
-                  value={selectedSocio.medio_pago || ''}
-                  onChange={(e) => handleFieldChange('medio_pago', e.target.value)}
-                  label="Medio Pago"
-                  variant="outlined"
-                >
-                  <MenuItem value="Tarjeta">Tarjeta</MenuItem>
-                  <MenuItem value="Domiciliación">Domiciliación</MenuItem>
-                  <MenuItem value="Transferencia">Transferencia</MenuItem>
-                </Select>
-              </FormControl>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.medio_pago || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
-
-          <Grid item xs={6}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Tipo Pago
-            </InputLabel>
-            {editMode ? (
-              <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                <InputLabel>Tipo Pago</InputLabel>
-                <Select
-                  value={selectedSocio.tipo_pago || ''}
-                  onChange={(e) => handleFieldChange('tipo_pago', e.target.value)}
-                  label="Tipo Pago"
-                  variant="outlined"
-                >
-                  <MenuItem value="Cuota">Cuota</MenuItem>
-                </Select>
-              </FormControl>
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.tipo_pago || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
-
-          <Grid item xs={12}>
-            <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              IBAN
-            </InputLabel>
-            {editMode ? (
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                value={selectedSocio.no_iban || ''}
-                onChange={(e) => handleFieldChange('no_iban', e.target.value)}
-                label="IBAN"
-                InputLabelProps={{ shrink: true }}
-                sx={{ mt: 1 }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {selectedSocio.no_iban || 'N/A'}
-              </Typography>
-            )}
-          </Grid>
-        </Grid>
-      </Card>
-    </Grid>
-  </Grid>
-)}
+                            <Grid item xs={12}>
+                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                IBAN
+                              </InputLabel>
+                              {editMode ? (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  variant="outlined"
+                                  value={selectedSocio.no_iban || ''}
+                                  onChange={(e) => handleFieldChange('no_iban', e.target.value)}
+                                  label="IBAN"
+                                  InputLabelProps={{ shrink: true }}
+                                  sx={{ mt: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body1" sx={{ mt: 1 }}>
+                                  {selectedSocio.no_iban || 'N/A'}
+                                </Typography>
+                              )}
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      </Grid>
+                    </Grid>
+                  )}
 
                 {fichaTab === 1 && (
                   <Box>
@@ -1808,7 +2209,7 @@ const handleDeleteSocio = async () => {
                         />
                         <Box ml={2}>
                           <Chip 
-                            label={selectedSocio.devolucion ? 'Aprobada' : 'Rechazada'} 
+                            label={selectedSocio.devolucion ? 'Si' : 'No'} 
                             color={selectedSocio.devolucion ? 'success' : 'error'}
                             variant="outlined"
                           />
@@ -1816,7 +2217,7 @@ const handleDeleteSocio = async () => {
                       </Box>
                       <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                         {selectedSocio.devolucion 
-                          ? 'La devolución fue aprobada correctamente' 
+                          ? 'La devolución fue realizada correctamente' 
                           : 'La devolución presenta incidencias'}
                       </Typography>
                     </Box>
@@ -1910,37 +2311,37 @@ const handleDeleteSocio = async () => {
                         
                       </Grid>
                       <Grid item xs={12} md={4}>
-  <Card 
-    sx={{ 
-      p: 0.8, 
-      textAlign: 'center',
-      border: '2px solid',
-      borderColor: selectedSocio.status === 'Ilocalizable' ? 'error.main' : 'transparent',
-      cursor: 'pointer',
-      '&:hover': {
-        boxShadow: 2,
-        borderColor: 'error.light'
-      }
-    }}
-    onClick={() => handleStatusChange('Ilocalizable')}
-  >
-    <PhoneDisabled 
-      color={selectedSocio.status === 'Ilocalizable' ? 'error' : 'action'} 
-      sx={{ 
-        fontSize: 40, 
-        mb: 1,
-        color: selectedSocio.status === 'Ilocalizable' ? 'error.main' : ''
-      }} 
-    />
-    <Typography variant="h6" color={selectedSocio.status === 'Ilocalizable' ? 'error.main' : 'text.primary'}>
-      Ilocalizable
-    </Typography>
-    <Typography variant="body2" color="text.secondary">
-      No se pudo contactar después de múltiples intentos
-    </Typography>
-  </Card>
-</Grid>
-                    </Grid>
+                        <Card 
+                          sx={{ 
+                            p: 0.8, 
+                            textAlign: 'center',
+                            border: '2px solid',
+                            borderColor: selectedSocio.status === 'Ilocalizable' ? 'error.main' : 'transparent',
+                            cursor: 'pointer',
+                            '&:hover': {
+                              boxShadow: 2,
+                              borderColor: 'error.light'
+                            }
+                          }}
+                          onClick={() => handleStatusChange('Ilocalizable')}
+                        >
+                          <PhoneDisabled 
+                            color={selectedSocio.status === 'Ilocalizable' ? 'error' : 'action'} 
+                            sx={{ 
+                              fontSize: 40, 
+                              mb: 1,
+                              color: selectedSocio.status === 'Ilocalizable' ? 'error.main' : ''
+                            }} 
+                          />
+                          <Typography variant="h6" color={selectedSocio.status === 'Ilocalizable' ? 'error.main' : 'text.primary'}>
+                            Ilocalizable
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            No se pudo contactar después de múltiples intentos
+                          </Typography>
+                        </Card>
+                      </Grid>
+                                          </Grid>
 
                     
                   </Box>

@@ -40,6 +40,62 @@ const DashboardSocios = () => {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSocio, setSelectedSocio] = useState(null);
+
+
+
+  // Nuevos estados para filtros avanzados
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [currentFilter, setCurrentFilter] = useState({
+    column: '',
+    operator: 'contains',
+    value: ''
+  });
+
+  // Columnas disponibles para filtrar
+  const availableColumns = [
+    { 
+      id: 'status', 
+      label: 'Estado', 
+      type: 'multi-select', 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+    },
+    { id: 'fecha_creacion', label: 'Fecha Creación', type: 'date' },
+    { id: 'nombre_socio', label: 'Nombre', type: 'text' },
+    { id: 'apellido_socio', label: 'Apellidos', type: 'text' },
+    { id: 'telefono_socio', label: 'Teléfono', type: 'text' },
+    { id: 'email_socio', label: 'Email', type: 'text' },
+    { id: 'ciudad_direccion', label: 'Ciudad', type: 'text' },
+    { id: 'importe', label: 'Cuota', type: 'number' },
+    { id: 'periodicidad', label: 'Periodicidad', type: 'text' },
+    { id: 'no_llamadas', label: 'N° Llamadas', type: 'number' },
+    { id: 'is_borrador', label: 'Incompleto', type: 'boolean' },
+    { id: 'fundraiser', label: 'Comercial', type: 'select', options: [] }
+  ];
+
+  // Operadores disponibles
+  const operators = {
+    text: [
+      { value: 'contains', label: 'contiene' },
+      { value: 'equals', label: 'es igual a' },
+      { value: 'startsWith', label: 'comienza con' },
+      { value: 'endsWith', label: 'termina con' }
+    ],
+    number: [
+      { value: 'equals', label: '=' },
+      { value: 'greaterThan', label: '>' },
+      { value: 'lessThan', label: '<' },
+      { value: 'greaterThanOrEqual', label: '>=' },
+      { value: 'lessThanOrEqual', label: '<=' }
+    ],
+    date: [
+      { value: 'equals', label: 'es igual a' },
+      { value: 'greaterThan', label: 'después de' },
+      { value: 'lessThan', label: 'antes de' }
+    ],
+    boolean: [
+      { value: 'equals', label: 'es' }
+    ]
+  };
   // Obtener datos del backend
   useEffect(() => {
     const fetchData = async () => {
@@ -75,11 +131,122 @@ const DashboardSocios = () => {
       return 'N/A';
     }
   };
-  // Filtrar socios basado en los filtros seleccionados
-  const filteredSocios = useMemo(() => {
-    let result = [...socios];
+
+
+
+// Manejar cambios en el filtro actual
+const handleFilterColumnChange = (e) => {
+  const columnId = e.target.value;
+  const column = availableColumns.find(c => c.id === columnId);
+  
+  setCurrentFilter({
+    column: columnId,
+    operator: column?.type === 'boolean' ? 'equals' : 
+             column?.type === 'number' ? 'equals' : 
+             column?.type === 'date' ? 'equals' : 'contains',
+    value: column?.type === 'boolean' ? true : 
+           column?.type === 'multi-select' ? [] : ''
+  });
+};
+
+// Añadir un nuevo filtro
+const addFilter = () => {
+  if (!currentFilter.column || 
+      (currentFilter.value === '' && !Array.isArray(currentFilter.value)) ||
+      (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)) {
+    return;
+  }
+  
+  // Verificar si ya existe un filtro para esta columna
+  const existingFilterIndex = activeFilters.findIndex(f => f.column === currentFilter.column);
+  
+  if (existingFilterIndex >= 0) {
+    // Reemplazar el filtro existente
+    const updatedFilters = [...activeFilters];
+    updatedFilters[existingFilterIndex] = currentFilter;
+    setActiveFilters(updatedFilters);
+  } else {
+    // Añadir nuevo filtro
+    setActiveFilters([...activeFilters, currentFilter]);
+  }
+  
+  // Resetear el filtro actual
+  setCurrentFilter({
+    column: '',
+    operator: 'contains',
+    value: ''
+  });
+};
+
+// Eliminar un filtro
+const removeFilter = (columnId) => {
+  setActiveFilters(activeFilters.filter(filter => filter.column !== columnId));
+};
+
+// Limpiar todos los filtros
+const clearAllFilters = () => {
+  setActiveFilters([]);
+  setSearchTerm('');
+  setTimeRange('last_year');
+  setStartDate(dayjs().subtract(1, 'year'));
+  setEndDate(dayjs());
+};
+
+// Aplicar los filtros a los datos
+const applyFilters = (data) => {
+  return data.filter(socio => {
+    // Filtro de búsqueda general
+    const matchesSearch = searchTerm === '' || 
+      `${socio.nombre_socio || ''} ${socio.apellido_socio || ''} ${socio.numero_identificacion_socio || ''}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
     
-    // Filtrar por rango de fechas (ahora en frontend)
+    // Filtros activos
+    const matchesActiveFilters = activeFilters.every(filter => {
+      const column = availableColumns.find(c => c.id === filter.column);
+      if (!column) return true;
+      
+      const value = socio[filter.column];
+      const filterValue = filter.value;
+      
+      // Manejar casos especiales primero
+      if (column.id === 'fundraiser') {
+        return socio.fundraiser?.id === filterValue;
+      }
+      
+      if (column.type === 'multi-select') {
+        return filterValue.includes(value);
+      }
+      
+      if (column.type === 'boolean') {
+        return value === filterValue;
+      }
+      
+      // Manejar operadores para texto, números y fechas
+      switch(filter.operator) {
+        case 'contains':
+          return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
+        case 'equals':
+          return String(value) === String(filterValue);
+        case 'startsWith':
+          return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
+        case 'endsWith':
+          return String(value || '').toLowerCase().endsWith(String(filterValue || '').toLowerCase());
+        case 'greaterThan':
+          return Number(value) > Number(filterValue);
+        case 'lessThan':
+          return Number(value) < Number(filterValue);
+        case 'greaterThanOrEqual':
+          return Number(value) >= Number(filterValue);
+        case 'lessThanOrEqual':
+          return Number(value) <= Number(filterValue);
+        default:
+          return true;
+      }
+    });
+    
+    // Filtro por rango de fechas
+    let matchesDateRange = true;
     if (timeRange !== 'todos') {
       const now = dayjs();
       let startDateFilter;
@@ -105,53 +272,159 @@ const DashboardSocios = () => {
       }
       
       if (startDateFilter) {
-        result = result.filter(socio => {
-          const fechaAlta = dayjs(socio.fecha_alta);
-          return fechaAlta.isAfter(startDateFilter) && 
-                 (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
-        });
+        const fechaAlta = dayjs(socio.fecha_creacion);
+        matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
+               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
       }
     }
     
-    // Filtrar por estado
-    if (statusFilter !== 'todos') {
-      result = result.filter(socio => socio.status === statusFilter);
-    }
-    
-    // Filtrar por búsqueda
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(socio => 
-        (socio.nombre_socio?.toLowerCase().includes(term)) ||
-        (socio.apellidos_socio?.toLowerCase().includes(term)) ||
-        (socio.numero_identificacion_socio?.toLowerCase().includes(term)) ||
-        (socio.ciudad_direccion?.toLowerCase().includes(term))
-      );
-    }
-    
-    return result;
-  }, [socios, timeRange, startDate, endDate, statusFilter, searchTerm]);
+    return matchesSearch && matchesActiveFilters && matchesDateRange;
+  });
+};
+
+// Filtrar socios basado en los filtros seleccionados
+const filteredSocios = useMemo(() => {
+  return applyFilters(socios);
+}, [socios, timeRange, startDate, endDate, searchTerm, activeFilters]);
+
 
   // Calcular estadísticas y tendencias
   const stats = useMemo(() => calculateStats(filteredSocios, socios), [filteredSocios, socios]);
-
-  if (loading) {
-    return (
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress size={60} />
-      </Box>
-    );
+// Renderizar el input adecuado para el tipo de filtro
+const renderFilterInput = () => {
+  const column = availableColumns.find(c => c.id === currentFilter.column);
+  if (!column) return null;
+  
+  switch(column.type) {
+    case 'multi-select':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valores</InputLabel>
+          <Select
+            multiple
+            value={currentFilter.value || []}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+            renderValue={(selected) => selected.join(', ')}
+          >
+            {column.options.map((option) => (
+              <MenuItem key={option} value={option}>
+                <Checkbox checked={currentFilter.value?.includes(option) || false} />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    
+    case 'boolean':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valor</InputLabel>
+          <Select
+            value={currentFilter.value}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value === 'true'})}
+          >
+            <MenuItem value={true}>Sí</MenuItem>
+            <MenuItem value={false}>No</MenuItem>
+          </Select>
+        </FormControl>
+      );
+    
+    case 'date':
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          type="date"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          InputLabelProps={{ shrink: true }}
+        />
+      );
+    
+    case 'number':
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+        />
+      );
+    
+    case 'select':
+      return (
+        <FormControl fullWidth size="small">
+          <InputLabel>Valor</InputLabel>
+          <Select
+            value={currentFilter.value || ''}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          >
+            {column.options.map(option => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    
+    default: // text
+      return (
+        <TextField
+          fullWidth
+          size="small"
+          value={currentFilter.value || ''}
+          onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+        />
+      );
   }
+};
 
-  if (error) {
-    return (
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Alert severity="error" sx={{ width: '100%', maxWidth: 600 }}>
-          {error}
-        </Alert>
-      </Box>
-    );
-  }
+// Renderizar el operador adecuado para el tipo de columna
+const renderOperatorSelect = () => {
+  const column = availableColumns.find(c => c.id === currentFilter.column);
+  if (!column) return null;
+  
+  let operatorType = 'text';
+  if (column.type === 'number') operatorType = 'number';
+  if (column.type === 'date') operatorType = 'date';
+  if (column.type === 'boolean') operatorType = 'boolean';
+  
+  return (
+    <FormControl size="small" sx={{ minWidth: 120 }}>
+      <InputLabel>Operador</InputLabel>
+      <Select
+        value={currentFilter.operator}
+        onChange={(e) => setCurrentFilter({...currentFilter, operator: e.target.value})}
+        label="Operador"
+      >
+        {operators[operatorType].map(op => (
+          <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+};
+
+if (loading) {
+  return (
+    <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <CircularProgress size={60} />
+    </Box>
+  );
+}
+
+if (error) {
+  return (
+    <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Alert severity="error" sx={{ width: '100%', maxWidth: 600 }}>
+        {error}
+      </Alert>
+    </Box>
+  );
+}
 
   return (
     <ProtectedRole requiredRoles={["JEFE"]}>
@@ -186,72 +459,139 @@ const DashboardSocios = () => {
         </Box>
 
         {/* Filtros */}
+        {/* Filtros avanzados */}
         <Card sx={{ mb: 3, borderRadius: 3, boxShadow: theme.shadows[3] }}>
-          <CardContent sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              size="small"
-              placeholder="Buscar socio..."
-              InputProps={{
-                startAdornment: <Search fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
-              }}
-              sx={{ minWidth: 300 }}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            
-            <FormControl sx={{ minWidth: 180 }}>
-              <InputLabel>Rango de tiempo</InputLabel>
-              <Select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                label="Rango de tiempo"
-              >
-                <MenuItem value="todos">Todos los registros</MenuItem>
-                <MenuItem value="last_week">Última semana</MenuItem>
-                <MenuItem value="last_month">Último mes</MenuItem>
-                <MenuItem value="last_quarter">Último trimestre</MenuItem>
-                <MenuItem value="last_year">Último año</MenuItem>
-                <MenuItem value="custom">Personalizado</MenuItem>
-              </Select>
-            </FormControl>
-            
-            {timeRange === 'custom' && (
-              <>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Fecha inicio"
-                    value={startDate}
-                    onChange={(newValue) => setStartDate(newValue)}
-                    sx={{ width: 180 }}
-                    maxDate={endDate}
-                  />
-                </LocalizationProvider>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Fecha fin"
-                    value={endDate}
-                    onChange={(newValue) => setEndDate(newValue)}
-                    sx={{ width: 180 }}
-                    minDate={startDate}
-                  />
-                </LocalizationProvider>
-              </>
+          <CardContent>
+            {/* Chips de filtros activos */}
+            {activeFilters.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {activeFilters.map((filter, index) => {
+                  const column = availableColumns.find(c => c.id === filter.column);
+                  let valueDisplay = filter.value;
+                  
+                  if (column?.type === 'multi-select') {
+                    valueDisplay = filter.value.join(', ');
+                  } else if (column?.type === 'boolean') {
+                    valueDisplay = filter.value ? 'Sí' : 'No';
+                  } else if (column?.id === 'fundraiser') {
+                    const user = socios.find(s => s.id === filter.value)?.fundraiser;
+                    valueDisplay = user ? `${user.first_name} ${user.last_name}` : filter.value;
+                  }
+                  
+                  return (
+                    <Chip
+                      key={index}
+                      label={`${column?.label || filter.column}: ${valueDisplay}`}
+                      onDelete={() => removeFilter(filter.column)}
+                      color="primary"
+                      size="small"
+                      variant="outlined"
+                    />
+                  );
+                })}
+                <Button size="small" onClick={clearAllFilters} sx={{ ml: 1 }}>
+                  Limpiar todo
+                </Button>
+              </Box>
             )}
-            
-            <FormControl sx={{ minWidth: 180 }}>
-              <InputLabel>Estado</InputLabel>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                label="Estado"
-              >
-                <MenuItem value="todos">Todos los estados</MenuItem>
-                <MenuItem value="Verificado">Verificado</MenuItem>
-                <MenuItem value="Pendiente">Pendiente</MenuItem>
-                <MenuItem value="Baja">Baja</MenuItem>
-                <MenuItem value="Ilocalizable">Ilocalizable</MenuItem>
-              </Select>
-            </FormControl>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {/* Búsqueda general */}
+              <TextField
+                size="small"
+                placeholder="Buscar socio..."
+                InputProps={{
+                  startAdornment: <Search fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
+                }}
+                sx={{ minWidth: 300 }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              
+              {/* Selector de rango de tiempo */}
+              <FormControl sx={{ minWidth: 180 }}>
+                <InputLabel>Rango de tiempo</InputLabel>
+                <Select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  label="Rango de tiempo"
+                >
+                  <MenuItem value="todos">Todos los registros</MenuItem>
+                  <MenuItem value="last_week">Última semana</MenuItem>
+                  <MenuItem value="last_month">Último mes</MenuItem>
+                  <MenuItem value="last_quarter">Último trimestre</MenuItem>
+                  <MenuItem value="last_year">Último año</MenuItem>
+                  <MenuItem value="custom">Personalizado</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {/* Selectores de fecha personalizada */}
+              {timeRange === 'custom' && (
+                <>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Fecha inicio"
+                      value={startDate}
+                      onChange={(newValue) => setStartDate(newValue)}
+                      sx={{ width: 180 }}
+                      maxDate={endDate}
+                    />
+                  </LocalizationProvider>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Fecha fin"
+                      value={endDate}
+                      onChange={(newValue) => setEndDate(newValue)}
+                      sx={{ width: 180 }}
+                      minDate={startDate}
+                    />
+                  </LocalizationProvider>
+                </>
+              )}
+            </Box>
+
+            {/* Filtros avanzados por columnas */}
+            <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+              {/* Selector de columna */}
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel>Columna</InputLabel>
+                <Select
+                  value={currentFilter.column || ''}
+                  onChange={handleFilterColumnChange}
+                  label="Columna"
+                >
+                  {availableColumns.map((column) => (
+                    <MenuItem key={column.id} value={column.id}>
+                      {column.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Selector de operador (si es necesario) */}
+              {currentFilter.column && 
+                availableColumns.find(c => c.id === currentFilter.column)?.type !== 'multi-select' && 
+                availableColumns.find(c => c.id === currentFilter.column)?.type !== 'boolean' &&
+                renderOperatorSelect()}
+
+              {/* Input de valor según el tipo de columna */}
+              {currentFilter.column && renderFilterInput()}
+
+              {/* Botón para añadir filtro */}
+              {currentFilter.column && (
+                <Button 
+                  variant="contained" 
+                  onClick={addFilter}
+                  disabled={
+                    !currentFilter.value || 
+                    (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
+                  }
+                  startIcon={<Add />}
+                >
+                  Añadir filtro
+                </Button>
+              )}
+            </Box>
           </CardContent>
         </Card>
 
@@ -656,9 +996,9 @@ const DashboardSocios = () => {
           <Box mb={3}>
             <Grid container spacing={2}>
               <Grid item xs={6}>
-                <Typography variant="subtitle2">Fecha Alta:</Typography>
+                <Typography variant="subtitle2">Fecha Ingreso:</Typography>
                 <Typography>
-                  {formatDate(selectedSocio.fecha_alta)}
+                  {formatDate(selectedSocio.fecha_creacion)}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -855,17 +1195,17 @@ function calculateStats(filteredSocios, allSocios) {
 
   // 1. Procesar todos los socios para datos mensuales
   const currentYearSocios = allSocios.filter(socio => {
-    return dayjs(socio.fecha_alta).year() === currentYear;
+    return dayjs(socio.fecha_creacion).year() === currentYear;
   });
 
   currentYearSocios.forEach(socio => {
-    const month = dayjs(socio.fecha_alta).month();
+    const month = dayjs(socio.fecha_creacion).month();
     stats.monthlyData[month]++;
   });
 
   // 2. Procesar socios del mes anterior para comparación
   const previousMonthSocios = allSocios.filter(socio => {
-    const fechaAlta = dayjs(socio.fecha_alta);
+    const fechaAlta = dayjs(socio.fecha_creacion);
     return fechaAlta.month() === currentMonth - 1 && fechaAlta.year() === currentYear;
   });
 
@@ -924,7 +1264,7 @@ function calculateStats(filteredSocios, allSocios) {
       stats.estados[socio.status]++;
     }
     
-    const socioDate = dayjs(socio.fecha_alta);
+    const socioDate = dayjs(socio.fecha_creacion);
     if (socioDate.month() === currentMonth && socioDate.year() === currentYear) {
       stats.nuevosEsteMes++;
     }

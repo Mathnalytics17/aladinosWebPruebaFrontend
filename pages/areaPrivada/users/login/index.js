@@ -81,6 +81,8 @@ export default function LoginPage() {
     
     setIsSubmitting(false);
   };
+console.log(error)
+
 
   return (
     <Container maxWidth="sm">
