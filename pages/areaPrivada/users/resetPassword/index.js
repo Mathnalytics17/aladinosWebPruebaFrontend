@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
     setError('');
     
     try {
-      await api.post('/password-reset/confirm/', {
+      await api.post('/users/password-reset/confirm/', {
         token,
         new_password: formData.new_password,
         new_password2: formData.new_password2,
@@ -134,7 +134,7 @@ export default function ResetPasswordPage() {
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            onClick={() => router.push('/login')}
+            onClick={() => router.push('/areaPrivada/users/login')}
           >
             Ir a Iniciar Sesión
           </Button>
