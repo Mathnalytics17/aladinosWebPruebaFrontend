@@ -37,7 +37,7 @@ export default function FormularioGoogleSheets() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDraft, setIsDraft] = useState(false); // Estado para borrador
-
+  const [loadingGuardar, setLoadingGuardar] = useState(false); // Estado para el botón de guardar borrador
   const [fundraisers, setFundraisers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const signatureRefSocio = useRef(null); // Referencia para la firma del socio
@@ -426,16 +426,18 @@ const prepararDatosParaEnvio = (data) => {
         dia_presentacion: data.dia_presentacion,
         is_borrador: true,
       };
-
+      setLoadingGuardar(true)
       const response = await api.post('registro/guardarBorrador/', draftData);
       
       setIsDraft(true);
       toast.success("Borrador guardado correctamente");
+      router.push("/formularioGoogleSheets/successGuardarBorrador");
     } catch (error) {
       const errorMessage = handleApiError(error, "Error al guardar borrador");
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setLoadingGuardar(true)
       setIsSubmitting(false);
     }
   };
@@ -1072,7 +1074,8 @@ const prepararDatosParaEnvio = (data) => {
           onClick={() => saveDraft(getValues())}
           disabled={loading}
         >
-          {loading ? <CircularProgress size={24} /> : "Guardar Borrador"}
+          {(loadingGuardar || loading) ? <CircularProgress size={24} /> : "Guardar Borrador"}
+
         </Button>
       </Grid2>
       <Grid2 item xs={6}>

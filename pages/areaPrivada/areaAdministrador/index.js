@@ -1343,7 +1343,7 @@ const renderOperatorSelect = () => {
                           </Table>
                         </TableContainer>
                         <TablePagination
-                          rowsPerPageOptions={[10, 25, 50]}
+                          rowsPerPageOptions={[10, 25, 50,100]}
                           component="div"
                           count={filteredData.length}
                           rowsPerPage={rowsPerPage}
@@ -1513,7 +1513,7 @@ const renderOperatorSelect = () => {
                                   </Tabs>
 
                                   {fichaTab === 0 && (
-                    <Grid container spacing={3}>
+                    <Grid container spacing={4}>
                       {/* Columna izquierda - Información Personal */}
                       <Grid item xs={12} md={6}>
                         <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
@@ -1723,31 +1723,41 @@ const renderOperatorSelect = () => {
                               )}
                             </Grid>
 
-                            {/* Email */}
-                            <Grid item xs={6}>
-                              <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                                Email
-                              </InputLabel>
-                              {editMode ? (
-                                <TextField
-                                  fullWidth
-                                  size="small"
-                                  variant="outlined"
-                                  value={selectedSocio.email_socio || ''}
-                                  onChange={(e) => handleFieldChange('email_socio', e.target.value)}
-                                  type="email"
-                                  error={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio)}
-                                  helperText={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio) 
-                                    ? "Formato de email inválido" 
-                                    : ""}
-                                  sx={{ mt: 1 }}
-                                />
-                              ) : (
-                                <Typography variant="body1" sx={{ mt: 1 }}>
-                                  {selectedSocio.email_socio || 'N/A'}
-                                </Typography>
-                              )}
-                            </Grid>
+                          {/* Email */}
+<Grid item xs={6}>
+  <InputLabel shrink sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+    Email
+  </InputLabel>
+  {editMode ? (
+    <TextField
+      fullWidth
+      size="small"
+      variant="outlined"
+      value={selectedSocio.email_socio || ''}
+      onChange={(e) => handleFieldChange('email_socio', e.target.value)}
+      type="email"
+      error={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio)}
+      helperText={selectedSocio.email_socio && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedSocio.email_socio) 
+        ? "Formato de email inválido" 
+        : ""}
+      sx={{ mt: 1 }}
+    />
+  ) : (
+    <Typography 
+      variant="body1" 
+      sx={{ 
+        mt: 1,
+        wordBreak: 'break-all', // Rompe en cualquier caracter necesario
+        whiteSpace: 'normal',   // Permite múltiples líneas
+        overflowWrap: 'break-word', // Priorita romper en puntos lógicos
+        display: 'inline-block',
+        width: '100%'
+      }}
+    >
+      {selectedSocio.email_socio || 'N/A'}
+    </Typography>
+  )}
+</Grid>
 
                             {/* Estado Datos */}
                             <Grid item xs={12}>
@@ -2197,24 +2207,24 @@ const renderOperatorSelect = () => {
                     <Box mb={3}>
                       <Typography variant="subtitle2">Devolución</Typography>
                       <Box display="flex" alignItems="center" mt={1}>
-                        <Switch
-                          checked={selectedSocio.devolucion === true}
-                          onChange={(e) => {
-                            setSelectedSocio({
-                              ...selectedSocio,
-                              devolucion: e.target.checked
-                            });
-                          }}
-                          color={selectedSocio.devolucion ? 'success' : 'error'}
-                        />
-                        <Box ml={2}>
-                          <Chip 
-                            label={selectedSocio.devolucion ? 'Si' : 'No'} 
-                            color={selectedSocio.devolucion ? 'success' : 'error'}
-                            variant="outlined"
-                          />
-                        </Box>
-                      </Box>
+  <Switch
+    checked={selectedSocio.devolucion === true}
+    onChange={(e) => {
+      setSelectedSocio({
+        ...selectedSocio,
+        devolucion: e.target.checked
+      });
+    }}
+    color={selectedSocio.devolucion ? 'error' : 'default'} // Rojo cuando true, gris (default) cuando false
+  />
+  <Box ml={2}>
+    <Chip 
+      label={selectedSocio.devolucion ? 'Si' : 'No'} 
+      color={selectedSocio.devolucion ? 'error' : 'default'} // Rojo cuando true, gris cuando false
+      variant="outlined"
+    />
+  </Box>
+</Box>
                       <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                         {selectedSocio.devolucion 
                           ? 'La devolución fue realizada correctamente' 

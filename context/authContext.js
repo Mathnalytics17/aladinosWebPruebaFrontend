@@ -226,69 +226,87 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Efecto para redirección según autenticación
-  useEffect(() => {
-    const handleRouteChange = (url) => {
-      // Rutas públicas que no requieren autenticación
-      const publicRoutes = [
-        '/',
-        '/formularioGoogleSheets',
-        '/areaPrivada/users/login',
-        '/areaPrivada/users/signUp',
-        '/areaPrivada/users/forgotPassword',
-        '/areaPrivada/users/resetPassword',
-        '/self-management' // Agregué esta ruta que mencionaste antes
-      ];
+  // Efecto para redirección según autenticación
+useEffect(() => {
+  const handleRouteChange = (url) => {
+    // Rutas públicas que no requieren autenticación
+    const publicRoutes = [
+      '/',
+      '/formularioGoogleSheets',
+      '/areaPrivada/users/login',
+      '/areaPrivada/users/signUp',
+      '/areaPrivada/users/forgotPassword',
+      '/areaPrivada/users/resetPassword',
+      '/self-management'
+    ];
+    
+    const path = url.split('?')[0];
+    
+    // Si es una ruta pública, no hacer ninguna verificación
+    if (publicRoutes.includes(path)) {
+      return;
+    }
+    
+    // Verificar si la ruta es parte del área privada
+    const isPrivateRoute = path.startsWith('/areaPrivada');
+    
+    // Si es una ruta privada y no está autenticado, redirigir a login
+    if (isPrivateRoute && !isAuthenticated()) {
+      router.push(`/areaPrivada/users/login`);
+      return;
+    }
+    
+    // Si está autenticado y trata de acceder a login/signup, redirigir según rol
+    if (isAuthenticated() && ['/areaPrivada/users/login', '/areaPrivada/users/signUp'].includes(path)) {
+      const roles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+      const mainRole = roles[0] || 'USER';
+      router.push(getRedirectPathByRole(mainRole));
+      return;
+    }
+    
+    // Si es ruta privada, verificar permisos según rol
+    if (isPrivateRoute && isAuthenticated()) {
+      const userRoles = JSON.parse(localStorage.getItem('user_roles') || '[]');
       
-      // Extraer solo el path sin parámetros de consulta
-      const path = url.split('?')[0];
-      
-      // Si es una ruta pública, no hacer ninguna verificación
-      if (publicRoutes.includes(path)) {
-        return; // Permite el acceso sin autenticación
-      }
-      
-      // Verificar si la ruta es parte del área privada
-      const isPrivateRoute = path.startsWith('/areaPrivada');
-      
-      // Si es una ruta privada y no está autenticado, redirigir a login
-      if (isPrivateRoute && !isAuthenticated()) {
-        router.push(`/areaPrivada/users/login`);
+      // Verificar acceso basado en rutas específicas por rol
+      if (path.startsWith('/areaPrivada/areaComercial') && !userRoles.includes('COMERCIAL')) {
+        router.push('/unauthorized');
         return;
       }
       
-      // Si está autenticado y trata de acceder a login/signup, redirigir según rol
-      if (isAuthenticated() && ['/areaPrivada/users/login', '/areaPrivada/users/signUp'].includes(path)) {
-        const roles = JSON.parse(localStorage.getItem('user_roles') || []);
-        console.log(roles)
-        const mainRole = roles[0] || 'USER';
-        router.push(getRedirectPathByRole(mainRole));
+      if (path.startsWith('/areaPrivada/areaAdministracion') && !userRoles.includes('GESTOR')) {
+        router.push('/unauthorized');
         return;
       }
       
-      // Si es ruta privada, verificar permisos
-      if (isPrivateRoute && isAuthenticated()) {
-        const userRoles = JSON.parse(localStorage.getItem('user_roles') || []);
-        const hasAccess = path.startsWith('/areaPrivada/') 
-          ? userRoles.includes('JEFE')
-          : true;
-        
-        if (!hasAccess) {
-          router.push('/unauthorized');
-        }
+      if (path.startsWith('/areaPrivada/finanzas') && !userRoles.includes('FINANZAS')) {
+        router.push('/unauthorized');
+        return;
       }
-    };
+      
+      if (path.startsWith('/areaPrivada/soporte') && !userRoles.includes('SOPORTE')) {
+        router.push('/unauthorized');
+        return;
+      }
+      
+      // Rutas exclusivas para JEFE
+      if (path.startsWith('/areaPrivada/') && !userRoles.includes('JEFE')) {
+        router.push('/unauthorized');
+        return;
+      }
+    }
+  };
+
+  // Ejecutar al montar el componente
+  handleRouteChange(router.pathname);
   
-    // Ejecutar al montar el componente
-    handleRouteChange(router.pathname);
-    
-    // Suscribirse a cambios de ruta
-    router.events.on('routeChangeStart', handleRouteChange);
-    
-    // Limpieza al desmontar
-    return () => {
-      router.events.off('routeChangeStart', handleRouteChange);
-    };
-  }, [router]);
+  // Suscribirse a cambios de ruta
+  router.events.on('routeChangeStart', handleRouteChange);
+  
+  return () => {
+    router.events.off('routeChangeStart', handleRouteChange);
+  };
+}, [router]);
 
   // Función de login mejorada
   const login = async (email, password) => {
