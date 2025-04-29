@@ -28,6 +28,7 @@ const AdminUsers = () => {
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
   // Configuración de axios con interceptor
+
   const api = axios.create({
     baseURL: `${process.env.NEXT_PUBLIC_API_URL}`,
   });
