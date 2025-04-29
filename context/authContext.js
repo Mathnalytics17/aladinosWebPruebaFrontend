@@ -162,7 +162,6 @@ export function AuthProvider({ children }) {
     return re.test(String(email).toLowerCase());
   };
 
-  // Función para determinar la ruta de redirección según el rol
   const getRedirectPathByRole = (role) => {
     const roleRoutes = {
       'JEFE': '/areaPrivada',
@@ -174,49 +173,32 @@ export function AuthProvider({ children }) {
     return roleRoutes[role] || '/areaPrivada';
   };
 
-  // Cargar usuario y verificar autenticación
   const loadUser = async () => {
     setIsLoading(true);
-    setAuthError(null);
-    
     try {
-      if (!isAuthenticated()) {
-        throw new Error('No autenticado');
-      }
+      if (!isAuthenticated()) throw new Error('No autenticado');
       
       const { data } = await api.get('/users/me/');
       setUser(data);
       
-      // Guardar información básica en localStorage
-      localStorage.setItem('access_email', data.email);
-      localStorage.setItem('access_first_name', data.first_name || '');
-      localStorage.setItem('access_last_name', data.last_name || '');
+      const rolesArray = data.role ? [data.role] : [];
+      setRoles(rolesArray);
+      localStorage.setItem('user_roles', JSON.stringify(rolesArray));
+      setAdmin(rolesArray.includes('JEFE') || Boolean(data.is_superuser));
       
-      // Manejar roles
-    const rolesArray = data.role ? [data.role] : [];
-    setRoles(rolesArray);
-    localStorage.setItem('user_roles', JSON.stringify(rolesArray));
-    setAdmin(rolesArray.includes('JEFE') || Boolean(data.is_superuser));
-    
-    return data;
+      return data;
     } catch (error) {
-      const errorMessage = ApiErrorHandler.getErrorMessage(error);
-      setAuthError(errorMessage);
-      
-      // Limpiar si el error es de autenticación
       if (error.response?.status === 401) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         setUser(null);
       }
-      
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Efecto para cargar usuario al inicio
   useEffect(() => {
     if (isAuthenticated()) {
       loadUser().catch(() => {});
@@ -225,203 +207,119 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Efecto para redirección según autenticación
-  // Efecto para redirección según autenticación
-useEffect(() => {
-  const handleRouteChange = (url) => {
-    // Rutas públicas que no requieren autenticación
-    const publicRoutes = [
-      '/',
-      '/formularioGoogleSheets',
-      '/areaPrivada/users/login',
-      '/areaPrivada/users/signUp',
-      '/areaPrivada/users/forgotPassword',
-      '/areaPrivada/users/resetPassword',
-      '/self-management'
-    ];
-    
-    const path = url.split('?')[0];
-    
-    // Si es una ruta pública, no hacer ninguna verificación
-    if (publicRoutes.includes(path)) {
-      return;
-    }
-    
-    // Verificar si la ruta es parte del área privada
-    const isPrivateRoute = path.startsWith('/areaPrivada');
-    
-    // Si es una ruta privada y no está autenticado, redirigir a login
-    if (isPrivateRoute && !isAuthenticated()) {
-      router.push(`/areaPrivada/users/login`);
-      return;
-    }
-    
-    // Si está autenticado y trata de acceder a login/signup, redirigir según rol
-    if (isAuthenticated() && ['/areaPrivada/users/login', '/areaPrivada/users/signUp'].includes(path)) {
-      const roles = JSON.parse(localStorage.getItem('user_roles') || '[]');
-      const mainRole = roles[0] || 'USER';
-      router.push(getRedirectPathByRole(mainRole));
-      return;
-    }
-    
-    // Si es ruta privada, verificar permisos según rol
-    if (isPrivateRoute && isAuthenticated()) {
-      const userRoles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      const publicRoutes = [
+        '/',
+        '/formularioGoogleSheets',
+        '/areaPrivada/users/login',
+        '/areaPrivada/users/signUp',
+        '/areaPrivada/users/forgotPassword',
+        '/areaPrivada/users/resetPassword',
+        '/self-management'
+      ];
       
-      // Verificar acceso basado en rutas específicas por rol
-      if (path.startsWith('/areaPrivada/areaComercial') && !userRoles.includes('COMERCIAL')) {
-        router.push('/unauthorized');
+      const path = url.split('?')[0];
+      
+      if (publicRoutes.includes(path)) return;
+      
+      if (!isAuthenticated() && path.startsWith('/areaPrivada')) {
+        router.push('/areaPrivada/users/login');
         return;
       }
       
-      if (path.startsWith('/areaPrivada/areaAdministracion') && !userRoles.includes('GESTOR')) {
-        router.push('/unauthorized');
-        return;
+      if (isAuthenticated()) {
+        const userRoles = JSON.parse(localStorage.getItem('user_roles'))|| [];
+        
+        // Verificación corregida de roles
+        if (path.startsWith('/areaPrivada/areaComercial') && userRoles.includes('COMERCIAL')) {
+          return;
+        }
+        
+        if (path.startsWith('/areaPrivada/areaAdministrador') && userRoles.includes('GESTOR')) {
+          return;
+        }
+        
+        if (path.startsWith('/areaPrivada/finanzas') && userRoles.includes('FINANZAS')) {
+          return;
+        }
+        
+        if (path.startsWith('/areaPrivada/soporte') && userRoles.includes('SOPORTE')) {
+          return;
+        }
+        
+        if (path.startsWith('/areaPrivada') && userRoles.includes('JEFE')) {
+          return;
+        }
+        
+        // Si no tiene permisos para la ruta actual
+        if (path.startsWith('/areaPrivada') && !userRoles.some(role => 
+          ['JEFE', 'GESTOR', 'COMERCIAL', 'FINANZAS', 'SOPORTE'].includes(role))
+        ) {
+          router.push('/unauthorized');
+        }
       }
-      
-      if (path.startsWith('/areaPrivada/finanzas') && !userRoles.includes('FINANZAS')) {
-        router.push('/unauthorized');
-        return;
-      }
-      
-      if (path.startsWith('/areaPrivada/soporte') && !userRoles.includes('SOPORTE')) {
-        router.push('/unauthorized');
-        return;
-      }
-      
-      // Rutas exclusivas para JEFE
-      if (path.startsWith('/areaPrivada/') && !userRoles.includes('JEFE')) {
-        router.push('/unauthorized');
-        return;
-      }
-    }
-  };
+    };
 
-  // Ejecutar al montar el componente
-  handleRouteChange(router.pathname);
-  
-  // Suscribirse a cambios de ruta
-  router.events.on('routeChangeStart', handleRouteChange);
-  
-  return () => {
-    router.events.off('routeChangeStart', handleRouteChange);
-  };
-}, [router]);
+    handleRouteChange(router.pathname);
+    router.events.on('routeChangeStart', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router]);
 
-  // Función de login mejorada
   const login = async (email, password) => {
     setIsLoading(true);
-    setAuthError(null);
-    
     try {
-      // Validaciones frontend más estrictas
-      if (!email || !validateEmail(email)) {
-        throw new Error('Por favor ingrese un email válido');
-      }
+      if (!validateEmail(email)) throw new Error('Email inválido');
+      if (password.length < 6) throw new Error('Contraseña muy corta');
       
-      if (!password || password.length < 6) {
-        throw new Error('La contraseña debe tener al menos 6 caracteres');
-      }
-      
-      const response = await api.post('/users/token/', { email, password })
-        .catch(error => {
-          // Manejo específico para errores de credenciales
-          if (error.response?.status === 401) {
-            throw new Error('Credenciales incorrectas. Por favor verifique su email y contraseña.');
-          }
-          throw error;
-        });
+      const response = await api.post('/users/token/', { email, password });
       
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       
-      // Obtener información del usuario
       const userData = await loadUser();
+      const roles = JSON.parse(localStorage.getItem('user_roles')) || [];
+      router.push(getRedirectPathByRole(roles[0] || 'USER'));
       
-      // Mostrar mensaje de bienvenida
-      toast.success(`Bienvenido ${userData.first_name || ''}`);
-      // Redirigir inmediatamente después del login exitoso
-    const roles = JSON.parse(localStorage.getItem('user_roles') || '[]');
-    const redirectPath = getRedirectPathByRole(roles[0] || 'USER');
-    router.push(redirectPath);
-      // Devuelve un objeto consistente
-      return { 
-        success: true, 
-        user: userData,
-        error: null 
-      };
+      return { success: true, user: userData };
     } catch (error) {
-      const errorMessage = error.message || ApiErrorHandler.getErrorMessage(error);
-      setAuthError(errorMessage);
+      const errorMessage = error.response?.status === 401 
+        ? 'Credenciales incorrectas' 
+        : ApiErrorHandler.getErrorMessage(error);
       toast.error(errorMessage);
-      
-      // Devuelve un objeto consistente incluso en errores
-      return { 
-        success: false, 
-        user: null,
-        error: errorMessage 
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Función de logout mejorada
-  const logout = async () => {
-    try {
-     
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-    } finally {
-      // Limpiar todo
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_roles');
-      localStorage.removeItem('access_email');
-      localStorage.removeItem('access_first_name');
-      localStorage.removeItem('access_last_name');
-      
-      setUser(null);
-      setRoles([]);
-      setAdmin(false);
-      
-      // Redirigir a login con mensaje
-      router.push('/areaPrivada/users/login?logout=success');
-    }
-  };
-
-  // Función de registro mejorada
-  const register = async (userData) => {
-    setIsLoading(true);
-    setAuthError(null);
-    
-    try {
-      // Validaciones frontend
-      if (!validateEmail(userData.email)) {
-        throw new Error('Por favor ingrese un email válido');
-      }
-      
-      if (userData.password.length < 8) {
-        throw new Error('La contraseña debe tener al menos 8 caracteres');
-      }
-      
-      if (userData.password !== userData.password2) {
-        throw new Error('Las contraseñas no coinciden');
-      }
-      
-      await api.post('/users/register/', userData);
-      toast.success('Registro exitoso. Por favor inicie sesión.');
-      
-      return { success: true };
-    } catch (error) {
-      const errorMessage = ApiErrorHandler.getErrorMessage(error);
-      setAuthError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
 
+  const logout = () => {
+    localStorage.clear();
+    setUser(null);
+    setRoles([]);
+    setAdmin(false);
+    router.push('/areaPrivada/users/login');
+  };
+
+  const register = async (userData) => {
+    setIsLoading(true);
+    try {
+      if (!validateEmail(userData.email)) throw new Error('Email inválido');
+      if (userData.password !== userData.password2) throw new Error('Contraseñas no coinciden');
+      
+      await api.post('/users/register/', userData);
+      toast.success('Registro exitoso');
+      return { success: true };
+    } catch (error) {
+      const errorMessage = ApiErrorHandler.getErrorMessage(error);
+      return { success: false, error: errorMessage };
+    } finally {
+      setIsLoading(false);
+    }
+  };
   // Función para verificar permisos
   const hasPermission = (requiredRole) => {
     if (!user) return false;
