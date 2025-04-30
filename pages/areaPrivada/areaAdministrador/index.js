@@ -36,7 +36,15 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
   Tooltip,LinearProgress, Checkbox // Añade esta importación
+=======
+  Tooltip,LinearProgress,Checkbox  // Añade esta importación
+>>>>>>> Stashed changes
+=======
+  Tooltip,LinearProgress,Checkbox  // Añade esta importación
+>>>>>>> Stashed changes
 } from '@mui/material';
 import { red, blue } from '@mui/material/colors';
 import { InputAdornment } from '@mui/material';
