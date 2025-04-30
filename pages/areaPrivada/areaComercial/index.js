@@ -6,14 +6,18 @@ import {
   Card, Grid2, Typography, Avatar, Chip, CircularProgress,
   TextField, MenuItem, Box, Button, Alert, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Switch, Tabs, Tab, IconButton
+  Dialog, DialogTitle, DialogContent, DialogActions,List, ListItem, ListItemText,
+  Switch, Tabs, Tab, IconButton,CardContent,FormControl, InputLabel,Select, Checkbox 
 } from '@mui/material'
 import {
   PeopleAlt, CalendarToday, PieChart, CheckCircle, AttachMoney,
   Search, FilterList, DateRange, Male, Female, TrendingUp,
-  Error, Warning, Phone, Close, Check,
+  Error, Warning, Phone, Close, Check,Delete,
+  Add,
+Clear, CalendarMonth, 
+Schedule, 
 } from '@mui/icons-material'
+import dayjs from 'dayjs';
 import { DatePicker } from '@mui/x-date-pickers'
 import { styled } from '@mui/material/styles'
 import { LocalizationProvider } from '@mui/x-date-pickers'
@@ -21,7 +25,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import ProtectedRole from '@/shared/components/protectedRoute';
 import { useRouter } from 'next/router';
 import LogoutIcon from '@mui/icons-material/Logout';
-
+import { alpha, useTheme } from '@mui/material/styles';
 // Componentes estilizados
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
@@ -47,19 +51,112 @@ const StatCard = ({ icon, title, value, subtext, onClick }) => (
 
 export default function PanelComercial() {
   const { user } = useAuth()
+  const theme = useTheme();
   const [socios, setSocios] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     estado: 'todos',
     busqueda: '',
     fecha_inicio: null,
     fecha_fin: null
   })
+   const [startDate, setStartDate] = useState(dayjs().subtract(1, 'year'));
+  const [endDate, setEndDate] = useState(dayjs());
   const [selectedSocio, setSelectedSocio] = useState(null)
   const [fichaTab, setFichaTab] = useState(0)
   const router = useRouter()
+  const [timeRange, setTimeRange] = useState('last_year');
+   const [fundraisers, setFundraisers] = useState([]);
+ // Nuevos estados para filtros avanzados
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [currentFilter, setCurrentFilter] = useState({
+    column: '',
+    operator: 'contains',
+    value: ''
+  }); 
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`// Nota la barra adicional
+         
+          
+        );
+        
+        setFundraisers(response.data); // Axios usa response.data
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching fundraisers');
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchData();
+  }, []);
+
+  console.log(fundraisers)
+// Generar el nuevo array con el formato deseado
+const fundraisers_dic = fundraisers.map(persona => {
+  return {
+    name: `${persona.first_name} ${persona.last_name}`,
+    code: persona.fundraiser_code
+  };
+});
+const fundraisers_list = fundraisers.map(persona => 
+  `${persona.first_name} ${persona.last_name}`
+);
+
+
+console.log(fundraisers_dic,fundraisers_list)
+
+  // Columnas disponibles para filtrar
+  const availableColumns = [
+    { 
+      id: 'status', 
+      label: 'Estado', 
+      type: 'multi-select', 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+    },
+    { id: 'fecha_creacion', label: 'Fecha Creación', type: 'date' },
+    { id: 'nombre_socio', label: 'Nombre', type: 'text' },
+    { id: 'apellido_socio', label: 'Apellidos', type: 'text' },
+    { id: 'telefono_socio', label: 'Teléfono', type: 'text' },
+    { id: 'email_socio', label: 'Email', type: 'text' },
+    { id: 'ciudad_direccion', label: 'Ciudad', type: 'text' },
+    { id: 'importe', label: 'Cuota', type: 'number' },
+    { id: 'periodicidad', label: 'Periodicidad', type: 'text' },
+    { id: 'no_llamadas', label: 'N° Llamadas', type: 'number' },
+    { id: 'is_borrador', label: 'Incompleto', type: 'boolean' },
+    { id: 'fundraiser', label: 'Comercial', type: 'multi-select', options:fundraisers_list }
+  ];
+
+  // Operadores disponibles
+  const operators = {
+    text: [
+      { value: 'contains', label: 'contiene' },
+      { value: 'equals', label: 'es igual a' },
+      { value: 'startsWith', label: 'comienza con' },
+      { value: 'endsWith', label: 'termina con' }
+    ],
+    number: [
+      { value: 'equals', label: '=' },
+      { value: 'greaterThan', label: '>' },
+      { value: 'lessThan', label: '<' },
+      { value: 'greaterThanOrEqual', label: '>=' },
+      { value: 'lessThanOrEqual', label: '<=' }
+    ],
+    date: [
+      { value: 'equals', label: 'es igual a' },
+      { value: 'greaterThan', label: 'después de' },
+      { value: 'lessThan', label: 'antes de' }
+    ],
+    boolean: [
+      { value: 'equals', label: 'es' }
+    ]
+  };
   // Función de logout
   const handleLogout = async () => {
     try {
@@ -124,6 +221,7 @@ export default function PanelComercial() {
     fetchData()
   }, [user])
 
+  console.log(socios)
   // Función para calcular edad
   const calcularEdad = (fechaNacimiento) => {
     if (!fechaNacimiento) return 'N/A'
@@ -136,45 +234,182 @@ export default function PanelComercial() {
     }
     return edad
   }
+// Manejar cambios en el filtro actual
+const handleFilterColumnChange = (e) => {
+  const columnId = e.target.value;
+  const column = availableColumns.find(c => c.id === columnId);
+  
+  setCurrentFilter({
+    column: columnId,
+    operator: column?.type === 'boolean' ? 'equals' : 
+             column?.type === 'number' ? 'equals' : 
+             column?.type === 'date' ? 'equals' : 'contains',
+    value: column?.type === 'boolean' ? true : 
+           column?.type === 'multi-select' ? [] : ''
+  });
+};
 
-  // Filtrado de socios
-  const sociosFiltrados = useMemo(() => {
-    return socios.filter(socio => {
-      // Filtro de búsqueda
-      const coincideBusqueda = `${socio.nombre_socio || ''} ${socio.apellido_socio || ''}`.toLowerCase()
-        .includes(filters.busqueda.toLowerCase())
-      
-      // Filtro de estado
-      const coincideEstado = filters.estado === 'todos' || 
-        (filters.estado === 'activo' && socio.activo) || 
-        (filters.estado === 'inactivo' && !socio.activo)
-      
-      // Filtro de fechas (usando fecha_creacion o fecha_alta como fallback)
-      const fechaSocio = new Date(socio.fecha_creacion)
-      const fechaInicio = filters.fecha_inicio ? new Date(filters.fecha_inicio) : null
-      const fechaFin = filters.fecha_fin ? new Date(filters.fecha_fin) : null
-      
-      let coincideFecha = true
-      if (fechaInicio) {
-        fechaInicio.setHours(0, 0, 0, 0)
-        coincideFecha = coincideFecha && fechaSocio >= fechaInicio
-      }
-      if (fechaFin) {
-        fechaFin.setHours(23, 59, 59, 999)
-        coincideFecha = coincideFecha && fechaSocio <= fechaFin
-      }
-      
-      return coincideBusqueda && coincideEstado && coincideFecha
-    })
-  }, [socios, filters])
+// Añadir un nuevo filtro
+const addFilter = () => {
+  if (!currentFilter.column || 
+      (currentFilter.value === '' && !Array.isArray(currentFilter.value)) ||
+      (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)) {
+    return;
+  }
+  
+  // Verificar si ya existe un filtro para esta columna
+  const existingFilterIndex = activeFilters.findIndex(f => f.column === currentFilter.column);
+  
+  if (existingFilterIndex >= 0) {
+    // Reemplazar el filtro existente
+    const updatedFilters = [...activeFilters];
+    updatedFilters[existingFilterIndex] = currentFilter;
+    setActiveFilters(updatedFilters);
+  } else {
+    // Añadir nuevo filtro
+    setActiveFilters([...activeFilters, currentFilter]);
+  }
+  
+  // Resetear el filtro actual
+  setCurrentFilter({
+    column: '',
+    operator: 'contains',
+    value: ''
+  });
+};
 
+// Eliminar un filtro
+const removeFilter = (columnId) => {
+  setActiveFilters(activeFilters.filter(filter => filter.column !== columnId));
+};
+
+// Limpiar todos los filtros
+const clearAllFilters = () => {
+  setActiveFilters([]);
+  setSearchTerm('');
+  setTimeRange('last_year');
+  setStartDate(dayjs().subtract(1, 'year'));
+  setEndDate(dayjs());
+};
+
+// Aplicar los filtros a los datos
+const applyFilters = (data) => {
+  return data.filter(socio => {
+    // Filtro de búsqueda general
+    const matchesSearch = searchTerm === '' || 
+      `${socio.nombre_socio || ''} ${socio.apellido_socio || ''} ${socio.numero_identificacion_socio || ''}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+    
+    // Filtros activos
+    const matchesActiveFilters = activeFilters.every(filter => {
+      const column = availableColumns.find(c => c.id === filter.column);
+      if (!column) return true;
+      
+      const value = socio[filter.column];
+      const filterValue = filter.value;
+      
+      // Manejar casos especiales primero
+      if (column.id === 'fundraiser') {
+        // Verificar si hay valores nulos o undefined primero
+        if (!socio.fundraiser) return false;
+        
+        // Convertir filterValue a string y manejar casos especiales
+        const safeFilterValue = String(filterValue || '').toLowerCase().trim();
+        if (!safeFilterValue) return true; // Si no hay filtro, mostrar todos
+        
+        // Obtener nombres (con manejo de valores nulos)
+        const firstName = String(socio.fundraiser.first_name || '').toLowerCase();
+        const lastName = String(socio.fundraiser.last_name || '').toLowerCase();
+        
+        // Verificar coincidencias
+        return `${firstName} ${lastName}`.includes(safeFilterValue) ||
+               firstName.includes(safeFilterValue) || 
+               lastName.includes(safeFilterValue);
+      }
+      
+      if (column.type === 'multi-select') {
+        return filterValue.includes(value);
+      }
+      
+      if (column.type === 'boolean') {
+        return value === filterValue;
+      }
+      
+      // Manejar operadores para texto, números y fechas
+      switch(filter.operator) {
+        case 'contains':
+          return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
+        case 'equals':
+          return String(value) === String(filterValue);
+        case 'startsWith':
+          return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
+        case 'endsWith':
+          return String(value || '').toLowerCase().endsWith(String(filterValue || '').toLowerCase());
+        case 'greaterThan':
+          return Number(value) > Number(filterValue);
+        case 'lessThan':
+          return Number(value) < Number(filterValue);
+        case 'greaterThanOrEqual':
+          return Number(value) >= Number(filterValue);
+        case 'lessThanOrEqual':
+          return Number(value) <= Number(filterValue);
+        default:
+          return true;
+      }
+    });
+    
+    // Filtro por rango de fechas
+    let matchesDateRange = true;
+    if (timeRange !== 'todos') {
+      const now = dayjs();
+      let startDateFilter;
+      
+      switch(timeRange) {
+        case 'last_week':
+          startDateFilter = now.subtract(1, 'week');
+          break;
+        case 'last_month':
+          startDateFilter = now.subtract(1, 'month');
+          break;
+        case 'last_quarter':
+          startDateFilter = now.subtract(3, 'months');
+          break;
+        case 'last_year':
+          startDateFilter = now.subtract(1, 'year');
+          break;
+        case 'custom':
+          startDateFilter = startDate;
+          break;
+        default:
+          startDateFilter = null;
+      }
+      
+      if (startDateFilter) {
+        const fechaAlta = dayjs(socio.fecha_creacion);
+        matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
+               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
+      }
+    }
+    
+    return matchesSearch && matchesActiveFilters && matchesDateRange;
+  });
+};
+
+// Filtrar socios basado en los filtros seleccionados
+const filteredSocios = useMemo(() => {
+  return applyFilters(socios);
+}, [socios, timeRange, startDate, endDate, searchTerm, activeFilters]);
+
+
+  
   // Cálculo de estadísticas
   const stats = useMemo(() => {
-    if (sociosFiltrados.length === 0) return null
+    if (filteredSocios.length === 0) return null
 
-    const totalSocios = sociosFiltrados.length
-    const sociosActivos = sociosFiltrados.filter(s => s.activo).length
-    const nuevos30Dias = sociosFiltrados.filter(s => {
+    const totalSocios = filteredSocios.length
+    const sociosActivos = filteredSocios.filter(s => s.activo).length
+    const nuevos30Dias = filteredSocios.filter(s => {
       const fechaCreacion = new Date(s.fecha_creacion )
       const hace30Dias = new Date()
       hace30Dias.setDate(hace30Dias.getDate() - 30)
@@ -182,12 +417,12 @@ export default function PanelComercial() {
     }).length
 
     const generoDist = {
-      masculino: sociosFiltrados.filter(s => s.genero_socio?.toLowerCase() === 'masculino').length,
-      femenino: sociosFiltrados.filter(s => s.genero_socio?.toLowerCase() === 'femenino').length
+      masculino: filteredSocios.filter(s => s.genero_socio?.toLowerCase() === 'masculino').length,
+      femenino: filteredSocios.filter(s => s.genero_socio?.toLowerCase() === 'femenino').length
     }
 
     const hoy = new Date()
-    const edades = sociosFiltrados.map(s => {
+    const edades = filteredSocios.map(s => {
       if (!s.fecha_nacimiento) return 0
       const nacimiento = new Date(s.fecha_nacimiento)
       let edad = hoy.getFullYear() - nacimiento.getFullYear()
@@ -205,7 +440,7 @@ export default function PanelComercial() {
       mayores_50: edades.filter(e => e > 50).length
     }
 
-    const recaudacionMensual = sociosFiltrados
+    const recaudacionMensual = filteredSocios
       .filter(s => s.activo)
       .reduce((sum, s) => sum + parseFloat(s.importe || 0), 0)
     
@@ -232,22 +467,175 @@ export default function PanelComercial() {
         por_cobrar: sociosActivos * 10
       }
     }
-  }, [sociosFiltrados])
+  }, [filteredSocios])
 
   // Manejo de cambios en los filtros
   const handleFilterChange = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }))
   }
-
+  const renderFilterInput = () => {
+    const column = availableColumns.find(c => c.id === currentFilter.column);
+    if (!column) return null;
+    
+    switch(column.type) {
+      case 'multi-select':
+        return (
+          <FormControl fullWidth size="small">
+            <InputLabel>Valores</InputLabel>
+            <Select
+              multiple
+              value={currentFilter.value || []}
+              onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {column.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  <Checkbox checked={currentFilter.value?.includes(option) || false} />
+                  <ListItemText primary={option} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+      
+      case 'boolean':
+        return (
+          <FormControl fullWidth size="small">
+            <InputLabel>Valor</InputLabel>
+            <Select
+              value={currentFilter.value}
+              onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value === 'true'})}
+            >
+              <MenuItem value={true}>Sí</MenuItem>
+              <MenuItem value={false}>No</MenuItem>
+            </Select>
+          </FormControl>
+        );
+      
+      case 'date':
+        return (
+          <TextField
+            fullWidth
+            size="small"
+            type="date"
+            value={currentFilter.value || ''}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+            InputLabelProps={{ shrink: true }}
+          />
+        );
+      
+      case 'number':
+        return (
+          <TextField
+            fullWidth
+            size="small"
+            type="number"
+            value={currentFilter.value || ''}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          />
+        );
+      
+      case 'select':
+        return (
+          <FormControl fullWidth size="small">
+            <InputLabel>Valor</InputLabel>
+            <Select
+              value={currentFilter.value || ''}
+              onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+            >
+              {column.options.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+      
+      default: // text
+        return (
+          <TextField
+            fullWidth
+            size="small"
+            value={currentFilter.value || ''}
+            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value})}
+          />
+        );
+    }
+  };
+  
+  // Renderizar el operador adecuado para el tipo de columna
+  const renderOperatorSelect = () => {
+    const column = availableColumns.find(c => c.id === currentFilter.column);
+    if (!column) return null;
+    
+    let operatorType = 'text';
+    if (column.type === 'number') operatorType = 'number';
+    if (column.type === 'date') operatorType = 'date';
+    if (column.type === 'boolean') operatorType = 'boolean';
+    
+    return (
+      <FormControl size="small" sx={{ minWidth: 120 }}>
+        <InputLabel>Operador</InputLabel>
+        <Select
+          value={currentFilter.operator}
+          onChange={(e) => setCurrentFilter({...currentFilter, operator: e.target.value})}
+          label="Operador"
+        >
+          {operators[operatorType].map(op => (
+            <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    );
+  };
+  
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Alert severity="error" sx={{ width: '100%', maxWidth: 600 }}>
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
   return (
     <ProtectedRole requiredRoles={["COMERCIAL"]}>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
           {/* Encabezado */}
           <Box mb={4}>
-            <Typography variant="h5" fontWeight={600} mb={1} sx={{ color: 'black' }}>
-              Panel Comercial
-            </Typography>
+          <Box mb={4}>
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    width: '100%'
+  }}>
+    <Typography variant="h5" fontWeight={600} sx={{ color: 'black' }}>
+      Panel Comercial
+    </Typography>
+    <Typography 
+      variant="h5" 
+      fontWeight={600} 
+      sx={{ 
+        color: 'black',
+        textAlign: 'right'
+      }}
+    >
+      Nombre Comercial: {user?.first_name} {user?.last_name}
+    </Typography>
+  </Box>
+</Box>
+            
             <Typography variant="body2" color="text.secondary">
               Gestión y seguimiento de tus socios comerciales
             </Typography>
@@ -262,56 +650,140 @@ export default function PanelComercial() {
             </Button>
           </Box>
 
-          {/* Filtros */}
-          <Box display="flex" gap={2} mb={4} flexWrap="wrap">
-            <TextField
-              size="small"
-              placeholder="Buscar socio..."
-              InputProps={{ startAdornment: <Search fontSize="small" /> }}
-              sx={{ minWidth: 250 }}
-              value={filters.busqueda}
-              onChange={(e) => handleFilterChange('busqueda', e.target.value)}
-            />
-            
-            <TextField
-              select
-              size="small"
-              value={filters.estado}
-              onChange={(e) => handleFilterChange('estado', e.target.value)}
-              sx={{ minWidth: 150 }}
-              InputProps={{ startAdornment: <FilterList fontSize="small" /> }}
-            >
-              <MenuItem value="todos">Todos</MenuItem>
-              <MenuItem value="activo">Activos</MenuItem>
-              <MenuItem value="inactivo">Inactivos</MenuItem>
-            </TextField>
+          <Card sx={{ mb: 3, borderRadius: 3, boxShadow: theme.shadows[3] }}>
+          <CardContent>
+            {/* Chips de filtros activos */}
+            {activeFilters.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {activeFilters.map((filter, index) => {
+                  const column = availableColumns.find(c => c.id === filter.column);
+                  let valueDisplay = filter.value;
+                  
+                  if (column?.type === 'multi-select') {
+                    valueDisplay = filter.value.join(', ');
+                  } else if (column?.type === 'boolean') {
+                    valueDisplay = filter.value ? 'Sí' : 'No';
+                  } else if (column?.id === 'fundraiser') {
+                    const user = socios.find(s => s.id === filter.value)?.fundraiser;
+                    valueDisplay = user ? `${user.first_name} ${user.last_name}` : filter.value;
+                  }
+                  
+                  return (
+                    <Chip
+                      key={index}
+                      label={`${column?.label || filter.column}: ${valueDisplay}`}
+                      onDelete={() => removeFilter(filter.column)}
+                      color="primary"
+                      size="small"
+                      variant="outlined"
+                    />
+                  );
+                })}
+                <Button size="small" onClick={clearAllFilters} sx={{ ml: 1 }}>
+                  Limpiar todo
+                </Button>
+              </Box>
+            )}
 
-            <DatePicker
-              label="Fecha inicio"
-              value={filters.fecha_inicio}
-              onChange={(date) => handleFilterChange('fecha_inicio', date)}
-              slotProps={{ textField: { size: 'small' } }}
-            />
-            
-            <DatePicker
-              label="Fecha fin"
-              value={filters.fecha_fin}
-              onChange={(date) => handleFilterChange('fecha_fin', date)}
-              slotProps={{ textField: { size: 'small' } }}
-            />
-            
-            <Button 
-              variant="outlined" 
-              onClick={() => setFilters({
-                estado: 'todos',
-                busqueda: '',
-                fecha_inicio: null,
-                fecha_fin: null
-              })}
-            >
-              Limpiar filtros
-            </Button>
-          </Box>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {/* Búsqueda general */}
+              <TextField
+                size="small"
+                placeholder="Buscar socio..."
+                InputProps={{
+                  startAdornment: <Search fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
+                }}
+                sx={{ minWidth: 300 }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              
+              {/* Selector de rango de tiempo */}
+              <FormControl sx={{ minWidth: 180 }}>
+                <InputLabel>Rango de tiempo</InputLabel>
+                <Select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  label="Rango de tiempo"
+                >
+                  <MenuItem value="todos">Todos los registros</MenuItem>
+                  <MenuItem value="last_week">Última semana</MenuItem>
+                  <MenuItem value="last_month">Último mes</MenuItem>
+                  <MenuItem value="last_quarter">Último trimestre</MenuItem>
+                  <MenuItem value="last_year">Último año</MenuItem>
+                  <MenuItem value="custom">Personalizado</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {/* Selectores de fecha personalizada */}
+              {timeRange === 'custom' && (
+                <>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Fecha inicio"
+                      value={startDate}
+                      onChange={(newValue) => setStartDate(newValue)}
+                      sx={{ width: 180 }}
+                      maxDate={endDate}
+                    />
+                  </LocalizationProvider>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Fecha fin"
+                      value={endDate}
+                      onChange={(newValue) => setEndDate(newValue)}
+                      sx={{ width: 180 }}
+                      minDate={startDate}
+                    />
+                  </LocalizationProvider>
+                </>
+              )}
+            </Box>
+
+            {/* Filtros avanzados por columnas */}
+            <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+              {/* Selector de columna */}
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel>Columna</InputLabel>
+                <Select
+                  value={currentFilter.column || ''}
+                  onChange={handleFilterColumnChange}
+                  label="Columna"
+                >
+                  {availableColumns.map((column) => (
+                    <MenuItem key={column.id} value={column.id}>
+                      {column.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Selector de operador (si es necesario) */}
+              {currentFilter.column && 
+                availableColumns.find(c => c.id === currentFilter.column)?.type !== 'multi-select' && 
+                availableColumns.find(c => c.id === currentFilter.column)?.type !== 'boolean' &&
+                renderOperatorSelect()}
+
+              {/* Input de valor según el tipo de columna */}
+              {currentFilter.column && renderFilterInput()}
+
+              {/* Botón para añadir filtro */}
+              {currentFilter.column && (
+                <Button 
+                  variant="contained" 
+                  onClick={addFilter}
+                  disabled={
+                    !currentFilter.value || 
+                    (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
+                  }
+                  startIcon={<Add />}
+                >
+                  Añadir filtro
+                </Button>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -435,7 +907,7 @@ export default function PanelComercial() {
           ) : (
             <>
               <Typography variant="subtitle1" fontWeight={600} mb={2} sx={{ color: 'black' }}>
-                Listado de socios ({sociosFiltrados.length})
+                Listado de socios ({filteredSocios.length})
                 {filters.fecha_inicio && (
                   <Typography component="span" variant="body2" color="text.secondary" ml={1}>
                     {new Date(filters.fecha_inicio).toLocaleDateString()} - 
@@ -444,7 +916,7 @@ export default function PanelComercial() {
                 )}
               </Typography>
               
-              {sociosFiltrados.length > 0 ? (
+              {filteredSocios.length > 0 ? (
                 <TableContainer component={Paper} sx={{ mb: 4 }}>
                   <Table>
                     <TableHead>
@@ -454,13 +926,13 @@ export default function PanelComercial() {
                         {/*<TableCell>Cuota</TableCell> */}
                         
                         <TableCell>Edad</TableCell>
-                        <TableCell>Fecha Alta</TableCell>
+                        <TableCell>Fecha Ingreso</TableCell>
                          {/* <TableCell>Importe</TableCell> */}
                         
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {sociosFiltrados.map((socio) => (
+                      {filteredSocios.map((socio) => (
                         <TableRow 
                           key={socio.id} 
                           hover
@@ -481,10 +953,33 @@ export default function PanelComercial() {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            <StatusChip 
-                              label={socio.activo ? 'Activo' : 'Inactivo'} 
-                              color={socio.activo ? 'success' : 'default'}
-                            />
+                           <StatusChip 
+                                                                     label={socio?.status || 'Pendiente'}
+                                                                     color={
+                                                                       socio?.status === 'Verificado' ? 'success' :
+                                                                       socio?.status === 'Ilocalizable' ? 'info' :
+                                                                       socio?.status === 'Baja' ? 'error' : 
+                                                                       'warning' // Para Incidencia, Pendiente y por defecto
+                                                                     }
+                                                                     sx={{
+                                                                       // Sobreescribe los colores del theme con tus HEX
+                                                                       ...(socio?.status === 'Verificado' && { backgroundColor: '#4CAF50' }),
+                                                                       ...(socio?.status === 'Ilocalizable' && { backgroundColor: '#2196F3' }),
+                                                                       ...(socio?.status === 'Baja' && { backgroundColor: '#F44336' }),
+                                                                       ...((!socio?.status || socio?.status === 'Incidencia' || socio?.status === 'Pendiente') && { 
+                                                                         backgroundColor: socio?.status === 'Pendiente' ? '#3c3c3c' : '#FF9800'
+                                                                       }),
+                                                                       color: 'white',
+                                                                       fontWeight: 'bold'
+                                                                     }}
+                                                                     icon={
+                                                                       socio.status === 'Verificado' ? <CheckCircle fontSize="small" /> :
+                                                                       socio.status === 'Ilocalizable' ? <Info fontSize="small" /> :
+                                                                       socio.status === 'Baja' ? <Error fontSize="small" /> :  // Usamos Error en lugar de Cancel
+                                                                       socio.status === 'Incidencia' ? <Warning fontSize="small" /> :
+                                                                       <Schedule fontSize="small" /> // Ícono para Pendiente
+                                                                     }
+                                                                   />
                           </TableCell>
 
                            {/* <TableCell>
@@ -498,8 +993,7 @@ export default function PanelComercial() {
                           </TableCell>
                           <TableCell>
                             {socio.fecha_creacion ? 
-                              new Date(socio.fecha_creacion).toLocaleDateString() : 
-                              new Date(socio.fecha_alta).toLocaleDateString()}
+                              new Date(socio.fecha_creacion).toLocaleDateString() : 'N/A'}
                           </TableCell>
                            {/* <TableCell>
                             €{socio.importe || '0'}

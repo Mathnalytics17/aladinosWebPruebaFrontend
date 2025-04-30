@@ -36,7 +36,7 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
-  Tooltip,LinearProgress // Añade esta importación
+  Tooltip,LinearProgress, Checkbox // Añade esta importación
 } from '@mui/material';
 import { red, blue } from '@mui/material/colors';
 import { InputAdornment } from '@mui/material';
@@ -67,7 +67,7 @@ import {
   Edit,
   Delete,
     Add,
-  Clear,Checkbox 
+  Clear
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
@@ -127,6 +127,7 @@ const AdminPanel = () => {
   const [usersData, setUsersData] = useState([]);
   const [saving, setSaving] = useState(false);
   const [startDate, setStartDate] = React.useState(null);
+  
 const [endDate, setEndDate] = React.useState(null); 
   const [llamadasData, setLlamadasData] = useState([]);
   const [nuevaLlamada, setNuevaLlamada] = useState({
@@ -145,7 +146,44 @@ const [endDate, setEndDate] = React.useState(null);
   });
   const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [fundraisers, setFundraisers] = useState([]);
 
+
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`// Nota la barra adicional
+         
+          
+        );
+        
+        setFundraisers(response.data); // Axios usa response.data
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching fundraisers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  console.log(fundraisers)
+// Generar el nuevo array con el formato deseado
+const fundraisers_dic = fundraisers.map(persona => {
+  return {
+    name: `${persona.first_name} ${persona.last_name}`,
+    code: persona.fundraiser_code
+  };
+});
+const fundraisers_list = fundraisers.map(persona => 
+  `${persona.first_name} ${persona.last_name}`
+);
+
+
+console.log(fundraisers_dic,fundraisers_list)
   // Columnas disponibles para filtrar
   const availableColumns = [
     { 
@@ -164,7 +202,7 @@ const [endDate, setEndDate] = React.useState(null);
     { id: 'periodicidad', label: 'Periodicidad', type: 'text' },
     { id: 'no_llamadas', label: 'N° Llamadas', type: 'number' },
     { id: 'is_borrador', label: 'Incompleto', type: 'boolean' },
-    { id: 'fundraiser', label: 'Comercial', type: 'select', options: [] }
+    { id: 'fundraiser', label: 'Comercial', type: 'multi-select', options: fundraisers_list }
   ];
 
   // Operadores disponibles
@@ -467,7 +505,21 @@ const applyFilters = (data) => {
       
       // Manejar casos especiales primero
       if (column.id === 'fundraiser') {
-        return socio.fundraiser?.id === filterValue;
+        // Verificar si hay valores nulos o undefined primero
+        if (!socio.fundraiser) return false;
+        
+        // Convertir filterValue a string y manejar casos especiales
+        const safeFilterValue = String(filterValue || '').toLowerCase().trim();
+        if (!safeFilterValue) return true; // Si no hay filtro, mostrar todos
+        
+        // Obtener nombres (con manejo de valores nulos)
+        const firstName = String(socio.fundraiser.first_name || '').toLowerCase();
+        const lastName = String(socio.fundraiser.last_name || '').toLowerCase();
+        
+        // Verificar coincidencias
+        return `${firstName} ${lastName}`.includes(safeFilterValue) ||
+               firstName.includes(safeFilterValue) || 
+               lastName.includes(safeFilterValue);
       }
       
       if (column.type === 'multi-select') {

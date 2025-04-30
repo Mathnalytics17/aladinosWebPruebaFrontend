@@ -6,7 +6,7 @@ import {
   CircularProgress, Alert, TextField,Button,  Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,IconButton,Add,Clear,Delete
+  DialogActions,IconButton,Checkbox 
 } from '@mui/material';
 import { 
   PieChart, BarChart, LineChart,
@@ -20,7 +20,8 @@ import dayjs from 'dayjs';
 import { alpha, useTheme } from '@mui/material/styles';
 import { 
   TrendingUp, People, Euro, Cake, LocationOn, AssignmentInd,
-  CheckCircle, Warning, Error, FilterList, Search,Close,
+  CheckCircle, Warning, Error, FilterList, Search,Close,Delete,
+  Add,Clear
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import ProtectedRole from '@/shared/components/protectedRoute';
@@ -50,7 +51,41 @@ const DashboardSocios = () => {
     operator: 'contains',
     value: ''
   });
+  const [fundraisers, setFundraisers] = useState([]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`// Nota la barra adicional
+         
+          
+        );
+        
+        setFundraisers(response.data); // Axios usa response.data
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching fundraisers');
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchData();
+  }, []);
+
+  console.log(fundraisers)
+// Generar el nuevo array con el formato deseado
+const fundraisers_dic = fundraisers.map(persona => {
+  return {
+    name: `${persona.first_name} ${persona.last_name}`,
+    code: persona.fundraiser_code
+  };
+});
+const fundraisers_list = fundraisers.map(persona => 
+  `${persona.first_name} ${persona.last_name}`
+);
+
+
+console.log(fundraisers_dic,fundraisers_list)
   // Columnas disponibles para filtrar
   const availableColumns = [
     { 
@@ -69,7 +104,7 @@ const DashboardSocios = () => {
     { id: 'periodicidad', label: 'Periodicidad', type: 'text' },
     { id: 'no_llamadas', label: 'N° Llamadas', type: 'number' },
     { id: 'is_borrador', label: 'Incompleto', type: 'boolean' },
-    { id: 'fundraiser', label: 'Comercial', type: 'select', options: [] }
+    { id: 'fundraiser', label: 'Comercial', type: 'multi-select', options:fundraisers_list }
   ];
 
   // Operadores disponibles
@@ -211,7 +246,21 @@ const applyFilters = (data) => {
       
       // Manejar casos especiales primero
       if (column.id === 'fundraiser') {
-        return socio.fundraiser?.id === filterValue;
+        // Verificar si hay valores nulos o undefined primero
+        if (!socio.fundraiser) return false;
+        
+        // Convertir filterValue a string y manejar casos especiales
+        const safeFilterValue = String(filterValue || '').toLowerCase().trim();
+        if (!safeFilterValue) return true; // Si no hay filtro, mostrar todos
+        
+        // Obtener nombres (con manejo de valores nulos)
+        const firstName = String(socio.fundraiser.first_name || '').toLowerCase();
+        const lastName = String(socio.fundraiser.last_name || '').toLowerCase();
+        
+        // Verificar coincidencias
+        return `${firstName} ${lastName}`.includes(safeFilterValue) ||
+               firstName.includes(safeFilterValue) || 
+               lastName.includes(safeFilterValue);
       }
       
       if (column.type === 'multi-select') {
