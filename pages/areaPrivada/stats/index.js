@@ -566,10 +566,10 @@ if (error) {
                   label="Rango de tiempo"
                 >
                   <MenuItem value="todos">Todos los registros</MenuItem>
-                  <MenuItem value="last_week">Última semana</MenuItem>
-                  <MenuItem value="last_month">Último mes</MenuItem>
-                  <MenuItem value="last_quarter">Último trimestre</MenuItem>
-                  <MenuItem value="last_year">Último año</MenuItem>
+                  <MenuItem value="last_week">Esta semana</MenuItem>
+                  <MenuItem value="last_month">Mes actual</MenuItem>
+              
+                  <MenuItem value="last_year">Este año</MenuItem>
                   <MenuItem value="custom">Personalizado</MenuItem>
                 </Select>
               </FormControl>

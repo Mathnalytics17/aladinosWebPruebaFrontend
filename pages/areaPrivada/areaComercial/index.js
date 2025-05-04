@@ -17,6 +17,7 @@ import {
 Clear, CalendarMonth, 
 Schedule, 
 } from '@mui/icons-material'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import dayjs from 'dayjs';
 import { DatePicker } from '@mui/x-date-pickers'
 import { styled } from '@mui/material/styles'
@@ -364,22 +365,29 @@ const applyFilters = (data) => {
     if (timeRange !== 'todos') {
       const now = dayjs();
       let startDateFilter;
+      let endDateFilter = now; // Por defecto, el fin del rango es hoy
       
       switch(timeRange) {
         case 'last_week':
-          startDateFilter = now.subtract(1, 'week');
+          // Semana actual desde el lunes
+          startDateFilter = now.startOf('week'); // dayjs usa lunes como inicio de semana
           break;
         case 'last_month':
-          startDateFilter = now.subtract(1, 'month');
+          // Mes actual desde el día 1
+          startDateFilter = now.startOf('month');
           break;
         case 'last_quarter':
+          // Trimestre anterior (3 meses atrás)
           startDateFilter = now.subtract(3, 'months');
           break;
         case 'last_year':
-          startDateFilter = now.subtract(1, 'year');
+          // Año actual desde el 1ero de enero
+          startDateFilter = now.startOf('year');
           break;
         case 'custom':
+          // Rango personalizado
           startDateFilter = startDate;
+          endDateFilter = endDate || now; // Si no hay fecha final, usa hoy
           break;
         default:
           startDateFilter = null;
@@ -388,10 +396,10 @@ const applyFilters = (data) => {
       if (startDateFilter) {
         const fechaAlta = dayjs(socio.fecha_creacion);
         matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
-               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
+              (timeRange !== 'custom' || fechaAlta.isBefore(endDateFilter));
       }
     }
-    
+        
     return matchesSearch && matchesActiveFilters && matchesDateRange;
   });
 };
@@ -707,10 +715,10 @@ const filteredSocios = useMemo(() => {
                   label="Rango de tiempo"
                 >
                   <MenuItem value="todos">Todos los registros</MenuItem>
-                  <MenuItem value="last_week">Última semana</MenuItem>
-                  <MenuItem value="last_month">Último mes</MenuItem>
-                  <MenuItem value="last_quarter">Último trimestre</MenuItem>
-                  <MenuItem value="last_year">Último año</MenuItem>
+                  <MenuItem value="last_week">Esta semana</MenuItem>
+                  <MenuItem value="last_month">Mes actual</MenuItem>
+              
+                  <MenuItem value="last_year">Este año</MenuItem>
                   <MenuItem value="custom">Personalizado</MenuItem>
                 </Select>
               </FormControl>
