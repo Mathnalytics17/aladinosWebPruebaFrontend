@@ -6,15 +6,9 @@ import {
   CircularProgress, Alert, TextField,Button,  Dialog,
   DialogTitle,
   DialogContent,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
   DialogActions,IconButton,Checkbox 
-=======
-  DialogActions,IconButton
->>>>>>> Stashed changes
-=======
-  DialogActions,IconButton
->>>>>>> Stashed changes
+
 } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import { 
