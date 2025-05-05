@@ -326,7 +326,7 @@ if (timeRange !== 'todos') {
     default:
       startDateFilter = null;
   }
-  
+  console.log(startDateFilter)
   if (startDateFilter) {
     const fechaAlta = dayjs(socio.fecha_creacion);
     matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
@@ -480,7 +480,7 @@ if (error) {
     </Box>
   );
 }
-
+console.log(stats)
   return (
     <ProtectedRole requiredRoles={["JEFE"]}>
       <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
@@ -664,7 +664,7 @@ if (error) {
           <Grid item xs={12} sm={6} md={3}>
           <MetricCard 
             icon={<EuroSymbol sx={{ fontSize: 40 }} />}
-            title="Facturación mensual"
+            title="Facturación"
             value={`€${stats.facturacionMensual}`}
             trend={stats.trendFacturacion}
             color={theme.palette.success.main}
@@ -1224,29 +1224,17 @@ function calculateStats(filteredSocios, allSocios) {
            socio.devolucion;
   };
 
-  // Función para calcular facturación según periodicidad
-  const calcularFacturacion = (importe, periodicidad, esMensual = false) => {
-    const importeNum = parseFloat(importe) || 0;
-    if (esMensual) {
-      // Para facturación mensual, siempre devolvemos el importe mensual
-      switch(periodicidad) {
-        case 'Mensual': return importeNum;
-        case 'Trimestral': return importeNum / 3;
-        case 'Semestral': return importeNum / 6;
-        case 'Anual': return importeNum / 12;
-        default: return importeNum;
-      }
-    } else {
-      // Para facturación anual
-      switch(periodicidad) {
-        case 'Mensual': return importeNum * 12;
-        case 'Trimestral': return importeNum * 4;
-        case 'Semestral': return importeNum * 2;
-        case 'Anual': return importeNum;
-        default: return importeNum;
-      }
-    }
-  };
+ // Función simplificada para calcular facturación ANUAL
+ const calcularFacturacionAnual = (importe, periodicidad) => {
+  const importeNum = parseFloat(importe) || 0;
+  switch(periodicidad) {
+    case 'Mensual': return importeNum * 12;
+    case 'Trimestral': return importeNum * 4;
+    case 'Semestral': return importeNum * 2;
+    case 'Anual': return importeNum;
+    default: return importeNum; // Por si hay otros valores no contemplados
+  }
+};
 
   // 1. Procesar todos los socios para datos mensuales
   const currentYearSocios = allSocios.filter(socio => {
@@ -1266,7 +1254,7 @@ function calculateStats(filteredSocios, allSocios) {
 
   previousMonthSocios.forEach(socio => {
     if (!noFacturable(socio)) {
-      previousMonthFacturacion += calcularFacturacion(socio.importe, socio.periodicidad, true); // Facturación mensual
+      previousMonthFacturacion += calcularFacturacionAnual(socio.importe, socio.periodicidad, true); // Facturación mensual
     }
   });
 
@@ -1274,8 +1262,8 @@ function calculateStats(filteredSocios, allSocios) {
   filteredSocios.forEach(socio => {
     const importe = parseFloat(socio.importe) || 0;
     const facturable = !noFacturable(socio);
-    const facturacionAnual = facturable ? calcularFacturacion(importe, socio.periodicidad) : 0;
-    const facturacionMensual = facturable ? calcularFacturacion(importe, socio.periodicidad, true) : 0;
+    const facturacionAnual = facturable ? calcularFacturacionAnual(importe, socio.periodicidad) : 0;
+    const facturacionMensual = facturable ? calcularFacturacionAnual(importe, socio.periodicidad, true) : 0;
 
     // Estadísticas de facturación (solo para socios facturables)
     if (facturable) {
@@ -1284,7 +1272,7 @@ function calculateStats(filteredSocios, allSocios) {
       totalCuota += importe;
       cuotaCounts[importe] = (cuotaCounts[importe] || 0) + 1;
     } else {
-      facturacionPerdida += calcularFacturacion(importe, socio.periodicidad); // Facturación anual perdida
+      facturacionPerdida += calcularFacturacionAnual(importe, socio.periodicidad); // Facturación anual perdida
     }
 
     // Resto de estadísticas (igual que antes)
