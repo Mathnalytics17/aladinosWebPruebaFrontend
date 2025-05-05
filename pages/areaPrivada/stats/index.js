@@ -6,13 +6,9 @@ import {
   CircularProgress, Alert, TextField,Button,  Dialog,
   DialogTitle,
   DialogContent,
-<<<<<<< Updated upstream
-
-  DialogActions,IconButton,Checkbox 
-
-=======
   DialogActions,IconButton
->>>>>>> Stashed changes
+
+
 } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import { 
@@ -27,16 +23,11 @@ import dayjs from 'dayjs';
 import { alpha, useTheme } from '@mui/material/styles';
 import { 
   TrendingUp, People, Euro, Cake, LocationOn, AssignmentInd,
-<<<<<<< Updated upstream
+
 
   CheckCircle, Warning, Error, FilterList, Search,Close,Delete,
   Add,Clear
 
-
-=======
-  CheckCircle, Warning, Error, FilterList, Search,Close,Delete,
-  Add,Clear
->>>>>>> Stashed changes
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import ProtectedRole from '@/shared/components/protectedRoute';
