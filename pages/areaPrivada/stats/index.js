@@ -6,11 +6,8 @@ import {
   CircularProgress, Alert, TextField,Button,  Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,IconButton
-
-
+  DialogActions,IconButton,Checkbox 
 } from '@mui/material';
-import Checkbox from '@mui/material/Checkbox';
 import { 
   PieChart, BarChart, LineChart,
   ChartContainer, ChartTooltip, ChartLegend
@@ -23,11 +20,8 @@ import dayjs from 'dayjs';
 import { alpha, useTheme } from '@mui/material/styles';
 import { 
   TrendingUp, People, Euro, Cake, LocationOn, AssignmentInd,
-
-
   CheckCircle, Warning, Error, FilterList, Search,Close,Delete,
   Add,Clear
-
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import ProtectedRole from '@/shared/components/protectedRoute';
@@ -300,39 +294,45 @@ const applyFilters = (data) => {
       }
     });
     
-    // Filtro por rango de fechas
-    let matchesDateRange = true;
-    if (timeRange !== 'todos') {
-      const now = dayjs();
-      let startDateFilter;
-      
-      switch(timeRange) {
-        case 'last_week':
-          startDateFilter = now.subtract(1, 'week');
-          break;
-        case 'last_month':
-          startDateFilter = now.subtract(1, 'month');
-          break;
-        case 'last_quarter':
-          startDateFilter = now.subtract(3, 'months');
-          break;
-        case 'last_year':
-          startDateFilter = now.subtract(1, 'year');
-          break;
-        case 'custom':
-          startDateFilter = startDate;
-          break;
-        default:
-          startDateFilter = null;
-      }
-      
-      if (startDateFilter) {
-        const fechaAlta = dayjs(socio.fecha_creacion);
-        matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
-               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
-      }
-    }
-    
+   // Filtro por rango de fechas
+let matchesDateRange = true;
+if (timeRange !== 'todos') {
+  const now = dayjs();
+  let startDateFilter;
+  let endDateFilter = now; // Por defecto, el fin del rango es hoy
+  
+  switch(timeRange) {
+    case 'last_week':
+      // Semana actual desde el lunes
+      startDateFilter = now.startOf('week'); // dayjs usa lunes como inicio de semana
+      break;
+    case 'last_month':
+      // Mes actual desde el día 1
+      startDateFilter = now.startOf('month');
+      break;
+    case 'last_quarter':
+      // Trimestre anterior (3 meses atrás)
+      startDateFilter = now.subtract(3, 'months');
+      break;
+    case 'last_year':
+      // Año actual desde el 1ero de enero
+      startDateFilter = now.startOf('year');
+      break;
+    case 'custom':
+      // Rango personalizado
+      startDateFilter = startDate;
+      endDateFilter = endDate || now; // Si no hay fecha final, usa hoy
+      break;
+    default:
+      startDateFilter = null;
+  }
+  
+  if (startDateFilter) {
+    const fechaAlta = dayjs(socio.fecha_creacion);
+    matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
+           (timeRange !== 'custom' || fechaAlta.isBefore(endDateFilter));
+  }
+}
     return matchesSearch && matchesActiveFilters && matchesDateRange;
   });
 };

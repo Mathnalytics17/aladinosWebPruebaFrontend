@@ -365,29 +365,22 @@ const applyFilters = (data) => {
     if (timeRange !== 'todos') {
       const now = dayjs();
       let startDateFilter;
-      let endDateFilter = now; // Por defecto, el fin del rango es hoy
       
       switch(timeRange) {
         case 'last_week':
-          // Semana actual desde el lunes
-          startDateFilter = now.startOf('week'); // dayjs usa lunes como inicio de semana
+          startDateFilter = now.subtract(1, 'week');
           break;
         case 'last_month':
-          // Mes actual desde el día 1
-          startDateFilter = now.startOf('month');
+          startDateFilter = now.subtract(1, 'month');
           break;
         case 'last_quarter':
-          // Trimestre anterior (3 meses atrás)
           startDateFilter = now.subtract(3, 'months');
           break;
         case 'last_year':
-          // Año actual desde el 1ero de enero
-          startDateFilter = now.startOf('year');
+          startDateFilter = now.subtract(1, 'year');
           break;
         case 'custom':
-          // Rango personalizado
           startDateFilter = startDate;
-          endDateFilter = endDate || now; // Si no hay fecha final, usa hoy
           break;
         default:
           startDateFilter = null;
@@ -396,10 +389,10 @@ const applyFilters = (data) => {
       if (startDateFilter) {
         const fechaAlta = dayjs(socio.fecha_creacion);
         matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
-              (timeRange !== 'custom' || fechaAlta.isBefore(endDateFilter));
+               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
       }
     }
-        
+    
     return matchesSearch && matchesActiveFilters && matchesDateRange;
   });
 };
