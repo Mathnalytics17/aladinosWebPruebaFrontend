@@ -988,6 +988,58 @@ const renderOperatorSelect = () => {
               const localDate = new Date(date.getTime() - timezoneOffset);
               return localDate.toISOString().slice(0, 16);
             };
+
+            const handleDeleteLlamada = async (llamadaId) => {
+  if (!llamadaId || !selectedSocio) return;
+  
+  try {
+    setSaving(true);
+    
+    // 1. Eliminar la llamada del backend
+    await api.delete(`llamadas/${llamadaId}/`);
+    
+    // 2. Calcular el nuevo número de llamadas (no puede ser negativo)
+    const updatedCount = Math.max((selectedSocio.no_llamadas || 0) - 1, 0);
+    
+    // 3. Preparar datos actualizados del socio manteniendo el fundraiser
+    const updatedSocio = {
+      ...selectedSocio,
+      no_llamadas: updatedCount,
+      // Mantener toda la estructura del fundraiser si existe
+      fundraiser: selectedSocio.fundraiser ? {
+        id: selectedSocio.fundraiser.id,
+        ...selectedSocio.fundraiser
+      } : null
+    };
+    
+    // 4. Actualizar el socio en el backend (enviando solo el ID del fundraiser)
+    await api.put(`users/socio/${selectedSocio.id}/`, {
+      ...updatedSocio,
+      fundraiser: selectedSocio.fundraiser?.id || null
+    });
+    
+    // 5. Actualizar los estados locales
+    setLlamadasData(prev => prev.filter(l => l.id !== llamadaId));
+    setSelectedSocio(updatedSocio);
+    setSociosData(prev => 
+      prev.map(s => s.id === selectedSocio.id ? updatedSocio : s)
+    );
+    
+    // Mostrar notificación de éxito
+    // Puedes usar tu sistema de notificaciones aquí
+    console.log('Llamada eliminada correctamente');
+    
+  } catch (error) {
+    console.error('Error al eliminar llamada:', error);
+    if (error.response) {
+      console.error('Detalles del error:', error.response.data);
+      // Mostrar notificación de error al usuario
+      // Ejemplo: showErrorNotification('No se pudo eliminar la llamada');
+    }
+  } finally {
+    setSaving(false);
+  }
+};
             
         return (
           <ProtectedRole requiredRoles={["GESTOR", "JEFE"]}>
