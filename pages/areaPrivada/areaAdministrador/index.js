@@ -36,8 +36,7 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
-  Tooltip,LinearProgress,Checkbox  // Añade esta importación
-
+  Tooltip,LinearProgress, Checkbox // Añade esta importación
 } from '@mui/material';
 import { red, blue } from '@mui/material/colors';
 import { InputAdornment } from '@mui/material';
@@ -779,133 +778,79 @@ const handleDeleteSocio = async () => {
     }));
   };
 
-  const handleRegistrarLlamada = async () => {
-    if (!selectedSocio || !nuevaLlamada.resultado || llamadasData.length >= 10) return;
+ const handleRegistrarLlamada = async () => {
+  // Verificar límite solo para este socio
+  const llamadasDelSocio = llamadasData.filter(llamada => llamada.socio === selectedSocio.id);
+  if (!selectedSocio || !nuevaLlamada.resultado || llamadasDelSocio.length >= 10) {
+    return;
+  }
+
+  try {
+    setSaving(true);
     
-    try {
-      setSaving(true);
-      
-      // Preparar datos de la llamada manteniendo la estructura completa del fundraiser
-      const llamadaData = {
-        socio: selectedSocio.id,
-        fundraiser: selectedSocio.fundraiser?.id,  // Solo el ID para la llamada
-        resultado: nuevaLlamada.resultado,
-        notas: nuevaLlamada.notas,
-        numero_de_llamada: (selectedSocio.no_llamadas || 0) + 1
-      };
-      
-      // 1. Registrar la nueva llamada
-      const response = await api.post('llamadas/', llamadaData);
-      
-      // 2. Preparar datos actualizados del socio manteniendo el fundraiser original
-      const updatedSocio = {
-        ...selectedSocio,
-        no_llamadas: (selectedSocio.no_llamadas || 0) + 1,
-        // Mantener toda la estructura del fundraiser si existe
-        fundraiser: selectedSocio.fundraiser ? {
-          id: selectedSocio.fundraiser.id,
-          // incluir otros campos necesarios del fundraiser aquí
-          ...selectedSocio.fundraiser
-        } : null
-      };
-      
-      // 3. Actualizar el socio en el backend
-      // Enviar solo el ID del fundraiser para la actualización
-      await api.put(`users/socio/${selectedSocio.id}/`, {
-        ...updatedSocio,
-        fundraiser: selectedSocio.fundraiser?.id || null
-      });
-  
-      // 4. Actualizar estados locales manteniendo la estructura completa
-      setLlamadasData(prev => [...prev, response.data]);
-      setSelectedSocio(updatedSocio);
-      setSociosData(prev => 
-        prev.map(s => s.id === selectedSocio.id ? updatedSocio : s)
-      );
-      
-      setNuevaLlamada({ resultado: '', notas: '' });
-  
-      // Si se marcó como verificado
-      if (nuevaLlamada.resultado === 'Verificado') {
-        const verifiedSocio = {
-          ...updatedSocio,
-          status: 'Verificado',
-          fecha_verificacion: new Date().toISOString(),
-          // Mantener la estructura del fundraiser
-          fundraiser: selectedSocio.fundraiser ? {
-            id: selectedSocio.fundraiser.id,
-            ...selectedSocio.fundraiser
-          } : null
-        };
-        
-        // Enviar solo el ID para la actualización
-        await api.put(`users/socio/${selectedSocio.id}/`, {
-          ...verifiedSocio,
-          fundraiser: selectedSocio.fundraiser?.id || null
-        });
-        
-        // Actualizar estado local con la estructura completa
-        setSelectedSocio(verifiedSocio);
-        setSociosData(prev => 
-          prev.map(s => s.id === selectedSocio.id ? verifiedSocio : s)
-        );
-      }
-    } catch (error) {
-      console.error('Error al registrar llamada:', error);
-      if (error.response) {
-        console.error('Detalles del error:', error.response.data);
-      }
-      // Podrías añadir aquí un manejo de errores para el usuario
-    } finally {
-      setSaving(false);
-    }
-  };
-  const handleDeleteLlamada = async (llamadaId) => {
-    if (!llamadaId || !selectedSocio) return;
+    // Preparar datos de la llamada
+    const llamadaData = {
+      socio: selectedSocio.id,
+      fundraiser: selectedSocio.fundraiser?.id,
+      resultado: nuevaLlamada.resultado,
+      notas: nuevaLlamada.notas,
+      numero_de_llamada: (selectedSocio.no_llamadas || 0) + 1
+    };
     
-    try {
-      setSaving(true);
-      
-      // 1. Eliminar la llamada
-      await api.delete(`llamadas/${llamadaId}/`);
-      
-      // 2. Actualizar el contador de llamadas en el socio
-      const updatedCount = Math.max((selectedSocio.no_llamadas || 0) - 1, 0);
-      
-      // Preparar datos actualizados manteniendo el fundraiser
-      const updatedSocio = {
-        ...selectedSocio,
-        no_llamadas: updatedCount,
-        // Mantener la estructura del fundraiser si existe
-        fundraiser: selectedSocio.fundraiser ? {
-          id: selectedSocio.fundraiser.id,
-          ...selectedSocio.fundraiser
-        } : null
+    // 1. Registrar la nueva llamada
+    const response = await api.post('llamadas/', llamadaData);
+    
+    // 2. Actualizar el socio
+    const updatedSocio = {
+      ...selectedSocio,
+      no_llamadas: (selectedSocio.no_llamadas || 0) + 1,
+      fundraiser: selectedSocio.fundraiser // mantener la estructura completa
+    };
+    
+    // 3. Actualizar el socio en el backend
+    await api.put(`users/socio/${selectedSocio.id}/`, {
+      ...updatedSocio,
+      fundraiser: selectedSocio.fundraiser?.id || null // enviar solo el ID
+    });
+
+    // 4. Actualizar estados locales
+    setLlamadasData(prev => [...prev, response.data]);
+    setSelectedSocio(updatedSocio);
+    setSociosData(prev => 
+      prev.map(s => s.id === selectedSocio.id ? updatedSocio : s)
+    );
+    
+    setNuevaLlamada({ resultado: '', notas: '' });
+
+    // Si se marcó como verificado
+    if (nuevaLlamada.resultado === 'Verificado') {
+      const verifiedSocio = {
+        ...updatedSocio,
+        status: 'Verificado',
+        fecha_verificacion: new Date().toISOString(),
+        fundraiser: selectedSocio.fundraiser
       };
       
-      // 3. Actualizar el socio en el backend (enviando solo el ID del fundraiser)
       await api.put(`users/socio/${selectedSocio.id}/`, {
-        ...updatedSocio,
+        ...verifiedSocio,
         fundraiser: selectedSocio.fundraiser?.id || null
       });
       
-      // 4. Actualizar el estado local
-      setLlamadasData(prev => prev.filter(l => l.id !== llamadaId));
-      setSelectedSocio(updatedSocio);
+      setSelectedSocio(verifiedSocio);
       setSociosData(prev => 
-        prev.map(s => s.id === selectedSocio.id ? updatedSocio : s)
+        prev.map(s => s.id === selectedSocio.id ? verifiedSocio : s)
       );
-      
-    } catch (error) {
-      console.error('Error al eliminar llamada:', error);
-      if (error.response) {
-        console.error('Detalles del error:', error.response.data);
-      }
-      // Puedes agregar aquí un manejo de errores para el usuario
-    } finally {
-      setSaving(false);
     }
-  };
+  } catch (error) {
+    console.error('Error al registrar llamada:', error);
+    if (error.response) {
+      console.error('Detalles del error:', error.response.data);
+    }
+    // Mostrar notificación de error al usuario
+  } finally {
+    setSaving(false);
+  }
+};
 
   
 // Renderizar el input adecuado para el tipo de filtro
@@ -2428,19 +2373,19 @@ const renderOperatorSelect = () => {
                     </Box>
 
                     {/* Mostrar advertencia si se alcanzó el límite */}
-                    {llamadasData.length  >= 10 && (
-                      <Box 
-                        bgcolor="error.light" 
-                        color="error.contrastText" 
-                        p={2} 
-                        mb={2}
-                        borderRadius={1}
-                      >
-                        <Typography variant="body2">
-                          Límite alcanzado: Máximo 10 llamadas registradas por socio
-                        </Typography>
-                      </Box>
-                    )}
+                      {llamadasData.filter(llamada => llamada.socio === selectedSocio.id).length >= 10 && (
+                        <Box 
+                          bgcolor="error.light" 
+                          color="error.contrastText" 
+                          p={2} 
+                          mb={2}
+                          borderRadius={1}
+                        >
+                          <Typography variant="body2">
+                            Límite alcanzado: Máximo 10 llamadas registradas por socio
+                          </Typography>
+                        </Box>
+                      )}
 
                             {/* Lista de llamadas existentes */}
                             {llamadasData.length > 0 ? (
@@ -2514,7 +2459,7 @@ const renderOperatorSelect = () => {
                           )}
 
                     {/* Formulario para nueva llamada - Solo mostrar si hay menos de 10 llamadas */}
-                    {llamadasData.length < 10 && (
+                   {llamadasData.filter(llamada => llamada.socio === selectedSocio.id).length < 10 && (
                       <Box 
                         mt={3} 
                         p={3} 
