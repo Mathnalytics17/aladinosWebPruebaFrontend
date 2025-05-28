@@ -13,7 +13,7 @@ import {
   PeopleAlt, CalendarToday, PieChart, CheckCircle, AttachMoney,
   Search, FilterList, DateRange, Male, Female, TrendingUp,
   Error, Warning, Phone, Close, Check,Delete,
-  Add,
+  Add,Info,
 Clear, CalendarMonth, 
 Schedule, 
 } from '@mui/icons-material'
