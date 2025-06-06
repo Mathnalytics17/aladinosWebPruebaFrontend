@@ -172,7 +172,7 @@ const AdminUsers = () => {
   if (error) return <Typography color="error">{error}</Typography>;
 
   return (
-    <ProtectedRole requiredRoles={["JEFE"]}>
+    <ProtectedRole requiredRoles={["JEFE","GESTOR"]}>
       <Box sx={{ p: 3 }}>
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
