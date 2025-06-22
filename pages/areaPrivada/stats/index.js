@@ -6,8 +6,15 @@ import {
   CircularProgress, Alert, TextField,Button,  Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,IconButton,Checkbox 
+  DialogActions,IconButton,Checkbox,  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
+import AccountCircle from '@mui/icons-material/AccountCircle'; // Añade esta línea
+import LinearProgress from '@mui/material/LinearProgress'; // Añade este import
 import { 
   PieChart, BarChart, LineChart,
   ChartContainer, ChartTooltip, ChartLegend
@@ -326,7 +333,7 @@ if (timeRange !== 'todos') {
     default:
       startDateFilter = null;
   }
-  console.log(startDateFilter)
+  
   if (startDateFilter) {
     const fechaAlta = dayjs(socio.fecha_creacion);
     matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
@@ -1000,6 +1007,85 @@ console.log(stats)
             </List>
           </CardContent>
         </Card>
+       <Card>
+  <CardContent>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+      Cuota media por comercial
+    </Typography>
+    
+    <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
+  <Table>
+    <TableHead>
+      <TableRow>
+        <TableCell>Fundraiser</TableCell>
+        <TableCell align="right">Cuota media</TableCell>
+        <TableCell align="right">Socios</TableCell>
+        <TableCell>Progreso</TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {stats.cuotaPorFundraiser.map((fundraiser, index) => (
+        <TableRow 
+          key={index}
+          sx={{
+            '&:not(:last-child)': { borderBottom: '1px solid rgba(224, 224, 224, 0.5)' },
+            borderLeft: index < 3 ? 
+              `4px solid ${['#FFD700', '#C0C0C0', '#CD7F32'][index]}` : 
+              '4px solid transparent'
+          }}
+        >
+          <TableCell>
+            <Box display="flex" alignItems="center">
+              <AccountCircle color="primary" sx={{ mr: 1.5 }} />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {fundraiser.name}
+              </Typography>
+            </Box>
+          </TableCell>
+          
+          <TableCell align="right">
+            <Typography variant="h6" color="primary">
+              €{fundraiser.cuotaMedia.toFixed(2)}
+            </Typography>
+          </TableCell>
+          
+          <TableCell align="right">
+            <Typography variant="h6">
+              {fundraiser.totalSocios}
+            </Typography>
+          </TableCell>
+          
+          <TableCell>
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(fundraiser.cuotaMedia * 2, 100)}
+              sx={{ 
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: 'action.hover',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: index < 3 ? 
+                    ['#FFD700', '#C0C0C0', '#CD7F32'][index] : 
+                    'primary.main'
+                }
+              }} 
+            />
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</TableContainer>
+    
+    {stats.cuotaPorFundraiser.length === 0 && (
+      <Box textAlign="center" py={4}>
+        <Typography color="text.secondary">
+          No hay datos de comerciales disponibles
+        </Typography>
+      </Box>
+    )}
+  </CardContent>
+</Card>
         {/* Modal/Drawer para mostrar la ficha del socio */}
 {selectedSocio && (
   <Dialog
@@ -1076,7 +1162,7 @@ console.log(stats)
                   }}
                 />
               </Grid>
-              {/* Resto de campos de registro... */}
+              
             </Grid>
           </Box>
 
@@ -1312,6 +1398,34 @@ function calculateStats(filteredSocios, allSocios) {
       stats.nuevosEsteMes++;
     }
   });
+// Nuevo objeto para almacenar datos por fundraiser
+  const fundraisersStats = {};
+  console.log(filteredSocios)
+  filteredSocios.forEach(socio => {
+    const importe = parseFloat(socio.importe) || 0;
+    const facturable = !noFacturable(socio);
+    
+    if (facturable && socio.fundraiser) {
+      const fundraiserId = socio.fundraiser.id;
+      const fundraiserName = `${socio.fundraiser.first_name} ${socio.fundraiser.last_name}` || `Comercial ${fundraiserId}`;
+      
+      if (!fundraisersStats[fundraiserId]) {
+        fundraisersStats[fundraiserId] = {
+          name: fundraiserName,
+          totalCuota: 0,
+          sociosCount: 0,
+          sociosIds: new Set()
+        };
+      }
+      
+      // Evitar duplicados por si hay múltiples registros del mismo socio
+      if (!fundraisersStats[fundraiserId].sociosIds.has(socio.id)) {
+        fundraisersStats[fundraiserId].totalCuota += importe;
+        fundraisersStats[fundraiserId].sociosCount++;
+        fundraisersStats[fundraiserId].sociosIds.add(socio.id);
+      }
+    }
+  });
 
   // 4. Cálculos finales
   const sociosFacturablesCount = filteredSocios.filter(socio => !noFacturable(socio)).length;
@@ -1344,6 +1458,16 @@ function calculateStats(filteredSocios, allSocios) {
   stats.trendCuota = parseFloat((Math.random() * 10 - 2).toFixed(1));
   stats.trendEdad = parseFloat((Math.random() * 5 - 1).toFixed(1));
   stats.trendNuevos = parseFloat((Math.random() * 30 + 5).toFixed(1));
+stats.cuotaPorFundraiser = Object.values(fundraisersStats)
+    .map(fundraiser => ({
+      name: fundraiser.name,
+      cuotaMedia: fundraiser.sociosCount > 0 
+        ? parseFloat((fundraiser.totalCuota / fundraiser.sociosCount).toFixed(2))
+        : 0,
+      totalSocios: fundraiser.sociosCount,
+      totalRecaudado: fundraiser.totalCuota
+    }))
+    .sort((a, b) => b.cuotaMedia - a.cuotaMedia); // Ordenar por cuota media descendente
 
   return stats;
 }

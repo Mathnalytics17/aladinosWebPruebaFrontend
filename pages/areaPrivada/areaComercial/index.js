@@ -293,6 +293,15 @@ const clearAllFilters = () => {
   setEndDate(dayjs());
 };
 
+
+// Función para determinar si un socio NO es facturable
+const noFacturable = (socio) => {
+  return socio.is_borrador || 
+         socio.status === 'Baja' || 
+         socio.status === 'Incidencia' || 
+         socio.devolucion ||
+         socio.status === 'Incompleto';
+};
 // Aplicar los filtros a los datos
 const applyFilters = (data) => {
   return data.filter(socio => {
@@ -402,12 +411,14 @@ const filteredSocios = useMemo(() => {
   return applyFilters(socios);
 }, [socios, timeRange, startDate, endDate, searchTerm, activeFilters]);
 
-
+ const cuotasFacturables2 = filteredSocios
+    .filter(s => s.activo && !noFacturable(s))
+    console.log(cuotasFacturables2)
   
   // Cálculo de estadísticas
   const stats = useMemo(() => {
     if (filteredSocios.length === 0) return null
-
+    console.log(filteredSocios)
     const totalSocios = filteredSocios.length
     const sociosActivos = filteredSocios.filter(s => s.activo).length
     const nuevos30Dias = filteredSocios.filter(s => {
@@ -433,7 +444,20 @@ const filteredSocios = useMemo(() => {
       }
       return edad
     })
-    
+
+     const cuotasFacturables2 = filteredSocios
+    .filter(s => s.activo && !noFacturable(s))
+    console.log(cuotasFacturables2)
+     const cuotasFacturables = filteredSocios
+    .filter(s => s.activo && !noFacturable(s))
+    .map(s => s.importe)
+    .filter(importe => importe !== undefined && importe !== null);
+
+  const cuotaPromedio = cuotasFacturables.length > 0 
+    ? cuotasFacturables.reduce((a, b) => a + Number(b), 0) / cuotasFacturables.length
+    : 0;
+
+console.log(cuotaPromedio);
     const edadPromedio = edades.reduce((a, b) => a + b, 0) / edades.length || 0
     const distribucionEdad = {
       menores_30: edades.filter(e => e < 30).length,
@@ -453,6 +477,9 @@ const filteredSocios = useMemo(() => {
       total_socios: totalSocios,
       nuevos_ultimos_30_dias: nuevos30Dias,
       socios_activos: sociosActivos,
+      no_facturables: filteredSocios.filter(noFacturable).length,
+      cuota_promedio:cuotaPromedio.toFixed(2),
+      socios_facturables:cuotasFacturables2,
       demografia: {
         genero: generoDist,
         edad_promedio: edadPromedio,
@@ -794,13 +821,17 @@ const filteredSocios = useMemo(() => {
 
           {/* Estadísticas */}
           {stats && !loading && (
-            <Grid2 container spacing={3} mb={4}>
+            <Grid2 container spacing={3} mb={4}  sx={{
+    justifyContent: 'center', // Centra horizontalmente los items
+    alignItems: 'center',    // Centra verticalmente los items
+  }}>
               <Grid2 item xs={12} md={3}>
                 <StatCard 
                   icon={<PeopleAlt />}
                   title="Total socios"
                   value={stats.total_socios}
                   subtext={`${stats.nuevos_ultimos_30_dias} nuevos en 30 días`}
+                  sx={{ height: '100%' }}
                 />
               </Grid2>
               
@@ -810,26 +841,10 @@ const filteredSocios = useMemo(() => {
                   title="Socios activos"
                   value={stats.socios_activos}
                   subtext={`${Math.round((stats.socios_activos/stats.total_socios)*100)}% del total`}
+                  sx={{ height: '100%' }}
                 />
               </Grid2>
-               {/* <Grid2 item xs={12} md={3}>
-                <StatCard 
-                  icon={<AttachMoney />}
-                  title="Recaudación mensual"
-                  value={`€${stats.recaudacion.mensual.toFixed(2)}`}
-                  subtext={`€${stats.recaudacion.promedio_cuota.toFixed(2)} cuota promedio`}
-                />
-              </Grid2> */}
               
-              {/*   <Grid2 item xs={12} md={3}>
-                <StatCard 
-                  icon={<TrendingUp />}
-                  title="Comisiones"
-                  value={`€${stats.comisiones.total}`}
-                  subtext={`€${stats.comisiones.por_cobrar} por cobrar`}
-                />
-              </Grid2> */}
-            
               
               <Grid2 item xs={12} md={4}>
                 <Card sx={{ p: 3, height: '100%' }}>
@@ -880,22 +895,24 @@ const filteredSocios = useMemo(() => {
                   </Box>
                 </Card>
               </Grid2>
-              {/* <Grid2 item xs={12} md={4}>
+
+              
+              { <Grid2 item xs={12} md={4}>
                 <Card sx={{ p: 3, height: '100%' }}>
                   <Typography variant="subtitle2" color="text.secondary" mb={1}>
-                    Recaudación anual proyectada
+                    Cuota media
                   </Typography>
                   <Typography variant="h4" fontWeight={600}>
-                    €{stats.recaudacion.anual.toFixed(2)}
+                    €{stats.cuota_promedio}
                   </Typography>
                   <Typography variant="caption" display="block" mt={1}>
-                    {stats.socios_activos} socios activos
+                    {stats.total_socios -stats.no_facturables} socios facturable
                   </Typography>
                   <Typography variant="caption" display="block">
                     {stats.total_socios - stats.socios_activos} socios inactivos
                   </Typography>
                 </Card>
-              </Grid2> */}
+              </Grid2> }
               
 
             </Grid2>
@@ -908,7 +925,7 @@ const filteredSocios = useMemo(() => {
           ) : (
             <>
               <Typography variant="subtitle1" fontWeight={600} mb={2} sx={{ color: 'black' }}>
-                Listado de socios ({filteredSocios.length})
+                Listado de socios ({cuotasFacturables2.length})
                 {filters.fecha_inicio && (
                   <Typography component="span" variant="body2" color="text.secondary" ml={1}>
                     {new Date(filters.fecha_inicio).toLocaleDateString()} - 
@@ -917,7 +934,7 @@ const filteredSocios = useMemo(() => {
                 )}
               </Typography>
               
-              {filteredSocios.length > 0 ? (
+              {cuotasFacturables2.length > 0 ? (
                 <TableContainer component={Paper} sx={{ mb: 4 }}>
                   <Table>
                     <TableHead>
@@ -933,7 +950,7 @@ const filteredSocios = useMemo(() => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSocios.map((socio) => (
+                      {cuotasFacturables2.map((socio) => (
                         <TableRow 
                           key={socio.id} 
                           hover
@@ -954,33 +971,33 @@ const filteredSocios = useMemo(() => {
                             </Box>
                           </TableCell>
                           <TableCell>
-                           <StatusChip 
-                                                                     label={socio?.status || 'Pendiente'}
-                                                                     color={
-                                                                       socio?.status === 'Verificado' ? 'success' :
-                                                                       socio?.status === 'Ilocalizable' ? 'info' :
-                                                                       socio?.status === 'Baja' ? 'error' : 
-                                                                       'warning' // Para Incidencia, Pendiente y por defecto
-                                                                     }
-                                                                     sx={{
-                                                                       // Sobreescribe los colores del theme con tus HEX
-                                                                       ...(socio?.status === 'Verificado' && { backgroundColor: '#4CAF50' }),
-                                                                       ...(socio?.status === 'Ilocalizable' && { backgroundColor: '#2196F3' }),
-                                                                       ...(socio?.status === 'Baja' && { backgroundColor: '#F44336' }),
-                                                                       ...((!socio?.status || socio?.status === 'Incidencia' || socio?.status === 'Pendiente') && { 
-                                                                         backgroundColor: socio?.status === 'Pendiente' ? '#3c3c3c' : '#FF9800'
-                                                                       }),
-                                                                       color: 'white',
-                                                                       fontWeight: 'bold'
-                                                                     }}
-                                                                     icon={
-                                                                       socio.status === 'Verificado' ? <CheckCircle fontSize="small" /> :
-                                                                       socio.status === 'Ilocalizable' ? <Info fontSize="small" /> :
-                                                                       socio.status === 'Baja' ? <Error fontSize="small" /> :  // Usamos Error en lugar de Cancel
-                                                                       socio.status === 'Incidencia' ? <Warning fontSize="small" /> :
-                                                                       <Schedule fontSize="small" /> // Ícono para Pendiente
-                                                                     }
-                                                                   />
+<StatusChip 
+                          label={socio?.status || 'Pendiente'}
+                          color={
+                            socio?.status === 'Verificado' ? 'success' :
+                            socio?.status === 'Ilocalizable' ? 'info' :
+                            socio?.status === 'Baja' ? 'error' : 
+                            'warning' // Para Incidencia, Pendiente y por defecto
+                          }
+                          sx={{
+                            // Sobreescribe los colores del theme con tus HEX
+                            ...(socio?.status === 'Verificado' && { backgroundColor: '#4CAF50' }),
+                            ...(socio?.status === 'Ilocalizable' && { backgroundColor: '#2196F3' }),
+                            ...(socio?.status === 'Baja' && { backgroundColor: '#F44336' }),
+                            ...((!socio?.status || socio?.status === 'Incidencia' || socio?.status === 'Pendiente') && { 
+                              backgroundColor: socio?.status === 'Pendiente' ? '#3c3c3c' : '#FF9800'
+                            }),
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                          icon={
+                            socio.status === 'Verificado' ? <CheckCircle fontSize="small" /> :
+                            socio.status === 'Ilocalizable' ? <Info fontSize="small" /> :
+                            socio.status === 'Baja' ? <Error fontSize="small" /> :  // Usamos Error en lugar de Cancel
+                            socio.status === 'Incidencia' ? <Warning fontSize="small" /> :
+                            <Schedule fontSize="small" /> // Ícono para Pendiente
+                          }
+                        />
                           </TableCell>
 
                            {/* <TableCell>
