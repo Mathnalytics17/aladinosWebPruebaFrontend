@@ -1020,7 +1020,7 @@ console.log(stats)
         <TableCell>Fundraiser</TableCell>
         <TableCell align="right">Cuota media</TableCell>
         <TableCell align="right">Socios</TableCell>
-        <TableCell>Progreso</TableCell>
+       
       </TableRow>
     </TableHead>
     <TableBody>
@@ -1055,22 +1055,7 @@ console.log(stats)
             </Typography>
           </TableCell>
           
-          <TableCell>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.min(fundraiser.cuotaMedia * 2, 100)}
-              sx={{ 
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: 'action.hover',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: index < 3 ? 
-                    ['#FFD700', '#C0C0C0', '#CD7F32'][index] : 
-                    'primary.main'
-                }
-              }} 
-            />
-          </TableCell>
+        
         </TableRow>
       ))}
     </TableBody>
