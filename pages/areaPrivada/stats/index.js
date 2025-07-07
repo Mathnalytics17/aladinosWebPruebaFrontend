@@ -659,20 +659,12 @@ console.log(stats)
 
         {/* Métricas clave */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <MetricCard 
-              icon={<People sx={{ fontSize: 40 }} />}
-              title="Socios del Mes"
-              value={filteredSocios.length}
-              trend={stats.trendTotal}
-              color={theme.palette.primary.main}
-            />
-          </Grid>
+          
           <Grid item xs={12} sm={6} md={3}>
           <MetricCard 
             icon={<EuroSymbol sx={{ fontSize: 40 }} />}
             title="Facturación"
-            value={`€${stats.facturacionMensual}`}
+            value={`${stats.facturacionTotal} €`}
             trend={stats.trendFacturacion}
             color={theme.palette.success.main}
             subtext={
@@ -685,16 +677,25 @@ console.log(stats)
             }
           />
         </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+         
+           <Grid item xs={12} sm={6} md={3}>
             <MetricCard 
               icon={<Euro sx={{ fontSize: 40 }} />}
-              title="Cuota Media"
-              value={`${stats.cuotaMedia} €`}
+              title="Cuota Media Mensual Socios"
+              value={`${stats.facturacionMensual} €`}
               trend={stats.trendCuota}
               color={theme.palette.success.main}
             />
           </Grid>
-          
+          <Grid item xs={12} sm={6} md={3}>
+            <MetricCard 
+              icon={<People sx={{ fontSize: 40 }} />}
+              title="Socios del Mes"
+              value={filteredSocios.length}
+              trend={stats.trendTotal}
+              color={theme.palette.primary.main}
+            />
+          </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard 
               icon={<Cake sx={{ fontSize: 40 }} />}
@@ -1020,7 +1021,7 @@ console.log(stats)
         <TableCell>Fundraiser</TableCell>
         <TableCell align="right">Cuota media</TableCell>
         <TableCell align="right">Socios</TableCell>
-       
+        <TableCell>Progreso</TableCell>
       </TableRow>
     </TableHead>
     <TableBody>
@@ -1055,7 +1056,22 @@ console.log(stats)
             </Typography>
           </TableCell>
           
-        
+          <TableCell>
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(fundraiser.cuotaMedia * 2, 100)}
+              sx={{ 
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: 'action.hover',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: index < 3 ? 
+                    ['#FFD700', '#C0C0C0', '#CD7F32'][index] : 
+                    'primary.main'
+                }
+              }} 
+            />
+          </TableCell>
         </TableRow>
       ))}
     </TableBody>
@@ -1254,6 +1270,7 @@ function calculateStats(filteredSocios, allSocios) {
   // Inicialización de estadísticas
   const stats = {
     cuotaMedia: 0,
+    cuotaMediaMensual:0,
     cuotasComunes: [],
     genero: { masculino: 0, femenino: 0, otro: 0 },
     identificacion: { NIF: 0, NIE: 0, Pasaporte: 0, CIF: 0 },
@@ -1307,6 +1324,18 @@ function calculateStats(filteredSocios, allSocios) {
   }
 };
 
+ // Función simplificada para calcular facturación ANUAL
+ const calcularFacturacionMensual = (importe, periodicidad) => {
+  const importeNum = parseFloat(importe) || 0;
+  switch(periodicidad) {
+    case 'Mensual': return importeNum ;
+    case 'Trimestral': return importeNum/3 ;
+    case 'Semestral': return importeNum/6;
+    case 'Anual': return importeNum/12;
+    default: return importeNum; // Por si hay otros valores no contemplados
+  }
+};
+
   // 1. Procesar todos los socios para datos mensuales
   const currentYearSocios = allSocios.filter(socio => {
     return dayjs(socio.fecha_creacion).year() === currentYear;
@@ -1334,7 +1363,7 @@ function calculateStats(filteredSocios, allSocios) {
     const importe = parseFloat(socio.importe) || 0;
     const facturable = !noFacturable(socio);
     const facturacionAnual = facturable ? calcularFacturacionAnual(importe, socio.periodicidad) : 0;
-    const facturacionMensual = facturable ? calcularFacturacionAnual(importe, socio.periodicidad, true) : 0;
+    const facturacionMensual = facturable ? calcularFacturacionMensual(importe, socio.periodicidad, true) : 0;
 
     // Estadísticas de facturación (solo para socios facturables)
     if (facturable) {
@@ -1423,9 +1452,9 @@ function calculateStats(filteredSocios, allSocios) {
     .slice(0, 5);
 
   stats.edadMedia = filteredSocios.length > 0 ? Math.round(totalAge / filteredSocios.length) : 0;
-
+ console.log(facturacionActiva/ sociosFacturablesCount)
   // Facturación - ahora facturacionActiva ya es mensual
-  stats.facturacionMensual = parseFloat(facturacionActiva.toFixed(2));
+  stats.facturacionMensual = parseFloat(facturacionActiva/ sociosFacturablesCount).toFixed(2);
   stats.facturacionTotal = parseFloat(facturacionTotal.toFixed(2));
   stats.facturacionPerdida = parseFloat(facturacionPerdida.toFixed(2));
   stats.facturacionActiva = parseFloat(facturacionActiva.toFixed(2));
