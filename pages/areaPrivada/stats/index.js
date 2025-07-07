@@ -1046,7 +1046,7 @@ console.log(stats)
           
           <TableCell align="right">
             <Typography variant="h6" color="primary">
-              €{fundraiser.cuotaMedia.toFixed(2)}
+              {fundraiser.cuotaMediaMensual}€
             </Typography>
           </TableCell>
           
@@ -1059,7 +1059,7 @@ console.log(stats)
           <TableCell>
             <LinearProgress 
               variant="determinate" 
-              value={Math.min(fundraiser.cuotaMedia * 2, 100)}
+              value={Math.min(fundraiser.cuotaMediaMensual * 2, 100)}
               sx={{ 
                 height: 6,
                 borderRadius: 3,
@@ -1364,7 +1364,7 @@ function calculateStats(filteredSocios, allSocios) {
     const facturable = !noFacturable(socio);
     const facturacionAnual = facturable ? calcularFacturacionAnual(importe, socio.periodicidad) : 0;
     const facturacionMensual = facturable ? calcularFacturacionMensual(importe, socio.periodicidad, true) : 0;
-
+    
     // Estadísticas de facturación (solo para socios facturables)
     if (facturable) {
       facturacionTotal += facturacionAnual;
@@ -1412,34 +1412,39 @@ function calculateStats(filteredSocios, allSocios) {
       stats.nuevosEsteMes++;
     }
   });
-// Nuevo objeto para almacenar datos por fundraiser
-  const fundraisersStats = {};
-  console.log(filteredSocios)
-  filteredSocios.forEach(socio => {
-    const importe = parseFloat(socio.importe) || 0;
-    const facturable = !noFacturable(socio);
+// Construcción de fundraisersStats (como ya lo tienes)
+const fundraisersStats = {};
+filteredSocios.forEach(socio => {
+  const importe = parseFloat(socio.importe) || 0;
+  const facturable = !noFacturable(socio);
+  const periodicidad = socio.periodicidad;
+
+  if (facturable && socio.fundraiser) {
+    const fundraiserId = socio.fundraiser.id;
+    const fundraiserName = `${socio.fundraiser.first_name} ${socio.fundraiser.last_name}` || `Comercial ${fundraiserId}`;
     
-    if (facturable && socio.fundraiser) {
-      const fundraiserId = socio.fundraiser.id;
-      const fundraiserName = `${socio.fundraiser.first_name} ${socio.fundraiser.last_name}` || `Comercial ${fundraiserId}`;
-      
-      if (!fundraisersStats[fundraiserId]) {
-        fundraisersStats[fundraiserId] = {
-          name: fundraiserName,
-          totalCuota: 0,
-          sociosCount: 0,
-          sociosIds: new Set()
-        };
-      }
-      
-      // Evitar duplicados por si hay múltiples registros del mismo socio
-      if (!fundraisersStats[fundraiserId].sociosIds.has(socio.id)) {
-        fundraisersStats[fundraiserId].totalCuota += importe;
-        fundraisersStats[fundraiserId].sociosCount++;
-        fundraisersStats[fundraiserId].sociosIds.add(socio.id);
-      }
+    if (!fundraisersStats[fundraiserId]) {
+      fundraisersStats[fundraiserId] = {
+        name: fundraiserName,
+        totalCuota: 0,
+        totalCuotaMensual: 0, // Nuevo campo para acumular la cuota mensual
+        sociosCount: 0,
+        sociosIds: new Set(),
+        periodicidad: periodicidad
+      };
     }
-  });
+  
+    if (!fundraisersStats[fundraiserId].sociosIds.has(socio.id)) {
+      const cuotaMensual = calcularFacturacionMensual(importe, periodicidad);
+      console.log(cuotaMensual)
+      fundraisersStats[fundraiserId].totalCuota += importe;
+      fundraisersStats[fundraiserId].totalCuotaMensual += cuotaMensual;
+      fundraisersStats[fundraiserId].sociosCount++;
+      fundraisersStats[fundraiserId].sociosIds.add(socio.id);
+    }
+  }
+});
+
 
   // 4. Cálculos finales
   const sociosFacturablesCount = filteredSocios.filter(socio => !noFacturable(socio)).length;
@@ -1452,7 +1457,7 @@ function calculateStats(filteredSocios, allSocios) {
     .slice(0, 5);
 
   stats.edadMedia = filteredSocios.length > 0 ? Math.round(totalAge / filteredSocios.length) : 0;
- console.log(facturacionActiva/ sociosFacturablesCount)
+
   // Facturación - ahora facturacionActiva ya es mensual
   stats.facturacionMensual = parseFloat(facturacionActiva/ sociosFacturablesCount).toFixed(2);
   stats.facturacionTotal = parseFloat(facturacionTotal.toFixed(2));
@@ -1472,17 +1477,31 @@ function calculateStats(filteredSocios, allSocios) {
   stats.trendCuota = parseFloat((Math.random() * 10 - 2).toFixed(1));
   stats.trendEdad = parseFloat((Math.random() * 5 - 1).toFixed(1));
   stats.trendNuevos = parseFloat((Math.random() * 30 + 5).toFixed(1));
+  console.log(fundraisersStats)
+  console.log()
+// Cálculo de las estadísticas finales
 stats.cuotaPorFundraiser = Object.values(fundraisersStats)
-    .map(fundraiser => ({
-      name: fundraiser.name,
-      cuotaMedia: fundraiser.sociosCount > 0 
-        ? parseFloat((fundraiser.totalCuota / fundraiser.sociosCount).toFixed(2))
-        : 0,
-      totalSocios: fundraiser.sociosCount,
-      totalRecaudado: fundraiser.totalCuota
-    }))
-    .sort((a, b) => b.cuotaMedia - a.cuotaMedia); // Ordenar por cuota media descendente
+  .map(fundraiser => {
+    const cuotaMedia = fundraiser.sociosCount > 0 
+      ? parseFloat((fundraiser.totalCuota / fundraiser.sociosCount).toFixed(2))
+      : 0;
+    console.log(fundraiser.totalCuotaMensual / fundraiser.sociosCount)
+    const cuotaMediaMensual = fundraiser.sociosCount > 0
+      ? parseFloat((fundraiser.totalCuotaMensual / fundraiser.sociosCount).toFixed(2))
+      : 0;
 
+    return {
+      name: fundraiser.name,
+      cuotaMedia:cuotaMedia,
+      cuotaMediaMensual:cuotaMediaMensual,
+      totalSocios: fundraiser.sociosCount,
+      totalRecaudado: fundraiser.totalCuota,
+      totalRecaudadoMensual: parseFloat(fundraiser.totalCuotaMensual.toFixed(2)),
+      periodicidad: fundraiser.periodicidad
+    };
+  })
+  .sort((a, b) => b.cuotaMedia - a.cuotaMedia);
+  console.log(stats.cuotaPorFundraiser)
   return stats;
 }
 
