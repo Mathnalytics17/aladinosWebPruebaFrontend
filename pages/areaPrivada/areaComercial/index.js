@@ -412,7 +412,8 @@ const filteredSocios = useMemo(() => {
 }, [socios, timeRange, startDate, endDate, searchTerm, activeFilters]);
 
  const cuotasFacturables2 = filteredSocios
-    .filter(s => s.activo && !noFacturable(s))
+    .filter(s => s.activo && !noFacturable(s)) 
+    .filter(item => item.importe !== undefined && item.importe !== null);
     console.log(cuotasFacturables2)
   
   // Cálculo de estadísticas
@@ -450,14 +451,40 @@ const filteredSocios = useMemo(() => {
     console.log(cuotasFacturables2)
      const cuotasFacturables = filteredSocios
     .filter(s => s.activo && !noFacturable(s))
-    .map(s => s.importe)
+    .map(s => ({
+      importe: s.importe,
+      periodicidad: s.periodicidad // Asegúrate de que este campo existe en tus datos
+    }))
     .filter(importe => importe !== undefined && importe !== null);
+  const calcularFacturacionMensual = (importe, periodicidad) => {
+        const importeNum = parseFloat(importe) || 0;
+        switch(periodicidad) {
+          case 'Mensual': return importeNum ;
+          case 'Trimestral': return importeNum/3 ;
+          case 'Semestral': return importeNum/6;
+          case 'Anual': return importeNum/12;
+          default: return importeNum; // Por si hay otros valores no contemplados
+        }
+      };
 
   const cuotaPromedio = cuotasFacturables.length > 0 
     ? cuotasFacturables.reduce((a, b) => a + Number(b), 0) / cuotasFacturables.length
     : 0;
 
-console.log(cuotaPromedio);
+
+  // Calcular cuota promedio mensual usando la función calcularFacturacionMensual
+  const cuotaPromedioMensual = cuotasFacturables.length > 0
+    ? cuotasFacturables.reduce((a, b) => {
+        const importeMensual = calcularFacturacionMensual(b.importe, b.periodicidad);
+        return a + importeMensual;
+      }, 0) / cuotasFacturables.length
+    : 0;
+    console.log(cuotasFacturables)
+
+    
+   
+
+    console.log(cuotaPromedio);
     const edadPromedio = edades.reduce((a, b) => a + b, 0) / edades.length || 0
     const distribucionEdad = {
       menores_30: edades.filter(e => e < 30).length,
@@ -479,6 +506,7 @@ console.log(cuotaPromedio);
       socios_activos: sociosActivos,
       no_facturables: filteredSocios.filter(noFacturable).length,
       cuota_promedio:cuotaPromedio.toFixed(2),
+       cuota_promedio_mensual: cuotaPromedioMensual.toFixed(2), // Nueva métrica
       socios_facturables:cuotasFacturables2,
       demografia: {
         genero: generoDist,
@@ -903,7 +931,7 @@ console.log(cuotaPromedio);
                     Cuota media
                   </Typography>
                   <Typography variant="h4" fontWeight={600}>
-                    €{stats.cuota_promedio}
+                    €{stats.cuota_promedio_mensual}
                   </Typography>
                   <Typography variant="caption" display="block" mt={1}>
                     {stats.total_socios -stats.no_facturables} socios facturable
