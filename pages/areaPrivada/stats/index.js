@@ -306,7 +306,7 @@ let matchesDateRange = true;
 if (timeRange !== 'todos') {
   const now = dayjs();
   let startDateFilter;
-  let endDateFilter = now; // Por defecto, el fin del rango es hoy
+  let endDateFilter = now.endOf('day'); // Incluye todo el día actual
   
   switch(timeRange) {
     case 'last_week':
@@ -335,10 +335,17 @@ if (timeRange !== 'todos') {
   }
   
   if (startDateFilter) {
-    const fechaAlta = dayjs(socio.fecha_creacion);
-    matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
-           (timeRange !== 'custom' || fechaAlta.isBefore(endDateFilter));
-  }
+  const fechaAlta = dayjs(socio.fecha_creacion);
+  
+  // Versión alternativa que no usa isSameOrAfter/isSameOrBefore
+  matchesDateRange = (
+    (fechaAlta.isAfter(startDateFilter, 'day') )|| 
+     fechaAlta.isSame(startDateFilter, 'day')) && 
+    (timeRange !== 'custom' || 
+     (fechaAlta.isBefore(endDateFilter, 'day') || 
+      fechaAlta.isSame(endDateFilter, 'day'))
+  );
+}
 }
     return matchesSearch && matchesActiveFilters && matchesDateRange;
   });
@@ -682,7 +689,7 @@ console.log(stats)
             <MetricCard 
               icon={<Euro sx={{ fontSize: 40 }} />}
               title="Cuota Media Mensual Socios"
-              value={`${stats.facturacionMensual} €`}
+              value={`${Number(stats?.facturacionMensual) || 0} €`}
               trend={stats.trendCuota}
               color={theme.palette.success.main}
             />

@@ -374,37 +374,51 @@ const applyFilters = (data) => {
     if (timeRange !== 'todos') {
       const now = dayjs();
       let startDateFilter;
+      let endDateFilter = now.endOf('day'); // Incluye todo el día actual
       
       switch(timeRange) {
         case 'last_week':
-          startDateFilter = now.subtract(1, 'week');
+          // Semana actual desde el lunes
+          startDateFilter = now.startOf('week'); // dayjs usa lunes como inicio de semana
           break;
         case 'last_month':
-          startDateFilter = now.subtract(1, 'month');
+          // Mes actual desde el día 1
+          startDateFilter = now.startOf('month');
           break;
         case 'last_quarter':
+          // Trimestre anterior (3 meses atrás)
           startDateFilter = now.subtract(3, 'months');
           break;
         case 'last_year':
-          startDateFilter = now.subtract(1, 'year');
+          // Año actual desde el 1ero de enero
+          startDateFilter = now.startOf('year');
           break;
         case 'custom':
+          // Rango personalizado
           startDateFilter = startDate;
+          endDateFilter = endDate || now; // Si no hay fecha final, usa hoy
           break;
         default:
           startDateFilter = null;
       }
       
       if (startDateFilter) {
-        const fechaAlta = dayjs(socio.fecha_creacion);
-        matchesDateRange = fechaAlta.isAfter(startDateFilter) && 
-               (timeRange !== 'custom' || fechaAlta.isBefore(endDate));
-      }
+      const fechaAlta = dayjs(socio.fecha_creacion);
+      
+      // Versión alternativa que no usa isSameOrAfter/isSameOrBefore
+      matchesDateRange = (
+        (fechaAlta.isAfter(startDateFilter, 'day') )|| 
+         fechaAlta.isSame(startDateFilter, 'day')) && 
+        (timeRange !== 'custom' || 
+         (fechaAlta.isBefore(endDateFilter, 'day') || 
+          fechaAlta.isSame(endDateFilter, 'day'))
+      );
     }
+    }
+        return matchesSearch && matchesActiveFilters && matchesDateRange;
+      });
+    };
     
-    return matchesSearch && matchesActiveFilters && matchesDateRange;
-  });
-};
 
 // Filtrar socios basado en los filtros seleccionados
 const filteredSocios = useMemo(() => {
