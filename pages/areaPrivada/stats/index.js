@@ -309,10 +309,19 @@ if (timeRange !== 'todos') {
   let endDateFilter = now.endOf('day'); // Incluye todo el día actual
   
   switch(timeRange) {
-    case 'last_week':
-      // Semana actual desde el lunes
-      startDateFilter = now.startOf('week'); // dayjs usa lunes como inicio de semana
-      break;
+    case 'last_week': {
+    // Obtener el inicio de la semana pasada (lunes) y el final (domingo)
+    const startOfLastWeek = dayjs().subtract(1, 'week').startOf('week');
+    const endOfLastWeek = startOfLastWeek.endOf('week');
+    
+    // Convertir a formato ISO y ajustar zona horaria si es necesario
+    startDateFilter = startOfLastWeek.format('YYYY-MM-DD');
+    endDateFilter = endOfLastWeek.format('YYYY-MM-DD');
+    
+    // Para debug: verificar los rangos
+    console.log(`Rango semana pasada: ${startDateFilter} a ${endDateFilter}`);
+    break;
+  }
     case 'last_month':
       // Mes actual desde el día 1
       startDateFilter = now.startOf('month');
@@ -954,7 +963,7 @@ console.log(stats)
               Últimos socios registrados ({filteredSocios.length} resultados)
             </Typography>
             <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-              {filteredSocios.slice(0, 5).map((socio, index) => (
+              {filteredSocios.slice(0, 10).map((socio, index) => (
                 <React.Fragment key={socio.id || index}>
                    <ListItem 
                       alignItems="flex-start"
