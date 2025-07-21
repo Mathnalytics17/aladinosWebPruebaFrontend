@@ -553,22 +553,37 @@ const applyFilters = (data) => {
       }
     });
     
-    // Filtros rápidos
-    const matchesPending = !pendingFilter || socio.status === 'Pendiente';
-    const matchesVerifiedThisMonth = !verifiedThisMonthFilter || (
-      socio.status === 'Verificado' &&
-      socio.fecha_verificacion &&
-      new Date(socio.fecha_verificacion).getMonth() === new Date().getMonth() &&
-      new Date(socio.fecha_verificacion).getFullYear() === new Date().getFullYear()
-    );
-    const matchesIncidence = !incidenceFilter || socio.devolucion === false;
-    const matchesDateRange = !startDate || !endDate || (
-      new Date(socio.fecha_creacion) >= new Date(new Date(startDate).getTime() + 24 * 60 * 60 * 1000) && 
-      new Date(socio.fecha_creacion) <= new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1000)
-    );
-  
-    return matchesSearch && matchesActiveFilters && matchesPending && 
-           matchesVerifiedThisMonth && matchesIncidence && matchesDateRange;
+    // Filtros rápidos - VERSIÓN CORREGIDA
+const matchesPending = !pendingFilter || socio.status === 'Pendiente';
+
+
+// Usar UTC para la comparación de mes/año
+const matchesVerifiedThisMonth = !verifiedThisMonthFilter || (
+  socio.status === 'Verificado' &&
+  socio.fecha_verificacion &&
+  new Date(socio.fecha_verificacion).getUTCMonth() === new Date().getUTCMonth() &&
+  new Date(socio.fecha_verificacion).getUTCFullYear() === new Date().getUTCFullYear()
+);
+
+const matchesIncidence = !incidenceFilter || socio.devolucion === false;
+
+// Filtro de rango de fechas CORREGIDO (sin ajuste de 24h y usando UTC)
+const matchesDateRange = !startDate || !endDate || (
+  (() => {
+    const creationDate = new Date(socio.fecha_creacion);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Ajustar las fechas de filtro para cubrir todo el día
+    start.setUTCHours(0, 0, 0, 0);
+    end.setUTCHours(23, 59, 59, 999);
+    
+    return creationDate >= start && creationDate <= end;
+  })()
+);
+
+return matchesSearch && matchesActiveFilters && matchesPending && 
+       matchesVerifiedThisMonth && matchesIncidence && matchesDateRange;
   });
 };
 
