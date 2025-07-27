@@ -1268,7 +1268,7 @@ const renderOperatorSelect = () => {
                       sx={{ mb: 3 }}
                     >
                       <Tab label="Listado de Socios" />
-                      <Tab label="Estadísticas" />
+                      
                     </Tabs>
 
                     {/* Contenido según tab seleccionado */}
@@ -1425,98 +1425,7 @@ const renderOperatorSelect = () => {
                       </Paper>
                     )}
 
-                  {tabValue === 1 && stats && (
-                    <Box>
-                      <Grid container spacing={3} mb={4}>
-                        <Grid item xs={12} md={3}>
-                          <StatCard 
-                            icon={<PeopleAlt color="primary" />}
-                            title="Total socios"
-                            value={stats.total_socios}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <StatCard 
-                            icon={<CheckCircle color="success" />}
-                            title="Socios activos"
-                            value={stats.socios_activos}
-                            subtext={`${stats.porcentaje_activos}%`}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <StatCard 
-                            icon={<CalendarMonth color="info" />}
-                            title="Verificados este mes"
-                            value={stats.socios_verificados_mes}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <StatCard 
-                            icon={<Warning color="warning" />}
-                            title="Con incidencias"
-                            value={stats.socios_con_incidencia}
-                            subtext={`${Math.round((stats.socios_con_incidencia / stats.total_socios) * 100)}%`}
-                          />
-                        </Grid>
-                      </Grid>
-
-                      <Card sx={{ p: 3, mb: 4 }}>
-                        <Typography variant="h6" mb={3}>Distribución por género</Typography>
-                        <Grid container spacing={3}>
-                          <Grid item xs={12} md={6}>
-                            <Box display="flex" alignItems="center" mb={2}>
-                              <Box width={120}>
-                                <Chip label="Hombres" color="primary" />
-                              </Box>
-                              <Box flexGrow={1} px={2}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={(stats.genero.masculino / stats.total_socios) * 100}
-                                  color="primary"
-                                  sx={{ height: 8, borderRadius: 4 }}
-                                />
-                              </Box>
-                              <Box width={60} textAlign="right">
-                                <Typography>
-                                  {stats.genero.masculino} ({Math.round((stats.genero.masculino / stats.total_socios) * 100)}%)
-                                </Typography>
-                              </Box>
-                            </Box>
-                            
-                            <Box display="flex" alignItems="center">
-                              <Box width={120}>
-                                <Chip label="Mujeres" color="secondary" />
-                              </Box>
-                              <Box flexGrow={1} px={2}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={(stats.genero.femenino / stats.total_socios) * 100}
-                                  color="secondary"
-                                  sx={{ height: 8, borderRadius: 4 }}
-                                />
-                              </Box>
-                              <Box width={60} textAlign="right">
-                                <Typography>
-                                  {stats.genero.femenino} ({Math.round((stats.genero.femenino / stats.total_socios) * 100)}%)
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </Grid>
-                          
-                          <Grid item xs={12} md={6}>
-                            <Card variant="outlined" sx={{ p: 2 }}>
-                              <Typography variant="subtitle1" gutterBottom>Resumen estadístico</Typography>
-                              <Box>
-                                <Typography>Edad promedio: <strong>{stats.edad_promedio} años</strong></Typography>
-                                <Typography>Socios pendientes: <strong>{stats.socios_pendientes}</strong></Typography>
-                                <Typography>Ratio activos/inactivos: <strong>{stats.socios_activos}:{stats.total_socios - stats.socios_activos}</strong></Typography>
-                              </Box>
-                            </Card>
-                          </Grid>
-                        </Grid>
-                      </Card>
-                    </Box>
-                  )}
+             
                           {/* Dialog con ficha de socio */}
                             {/* Dialog con ficha de socio */}
                             <Dialog 
