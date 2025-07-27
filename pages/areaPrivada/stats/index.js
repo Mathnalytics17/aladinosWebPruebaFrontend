@@ -99,9 +99,9 @@ console.log(fundraisers_dic,fundraisers_list)
       id: 'status', 
       label: 'Estado', 
       type: 'multi-select', 
-      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente'] 
     },
-    { id: 'fecha_creacion', label: 'Fecha Creación', type: 'date' },
+    
     { id: 'nombre_socio', label: 'Nombre', type: 'text' },
     { id: 'apellido_socio', label: 'Apellidos', type: 'text' },
     { id: 'telefono_socio', label: 'Teléfono', type: 'text' },
@@ -279,11 +279,16 @@ const applyFilters = (data) => {
       }
       
       // Manejar operadores para texto, números y fechas
+      
       switch(filter.operator) {
+
         case 'contains':
           return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
         case 'equals':
-          return String(value) === String(filterValue);
+        if (column.type === 'number') {
+          // Comparación directa para numeric(10,2)
+          return Number(value).toFixed(2) === Number(filterValue).toFixed(2);
+        }
         case 'startsWith':
           return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
         case 'endsWith':
@@ -309,19 +314,26 @@ if (timeRange !== 'todos') {
   let endDateFilter = now.endOf('day'); // Incluye todo el día actual
   
   switch(timeRange) {
-    case 'last_week': {
-    // Obtener el inicio de la semana pasada (lunes) y el final (domingo)
-    const startOfLastWeek = dayjs().subtract(1, 'week').startOf('week');
-    const endOfLastWeek = startOfLastWeek.endOf('week');
-    
-    // Convertir a formato ISO y ajustar zona horaria si es necesario
-    startDateFilter = startOfLastWeek.format('YYYY-MM-DD');
-    endDateFilter = endOfLastWeek.format('YYYY-MM-DD');
-    
-    // Para debug: verificar los rangos
-    console.log(`Rango semana pasada: ${startDateFilter} a ${endDateFilter}`);
-    break;
-  }
+   case 'this_week': {
+  // 1. Configuración INQUEBRANTABLE para semana Lunes-Domingo
+  const dayjs = require('dayjs');
+  require('dayjs/locale/es');
+  dayjs.locale('es'); // Obliga a que la semana empiece en LUNES
+  
+  // 2. Obtener rango INFALIBLE (semana actual)
+  const today = dayjs(); // 2025-07-23 (miércoles)
+  const startOfWeek = today.startOf('week'); // Lunes 21/07/2025
+  const endOfWeek = today.endOf('week'); // Domingo 27/07/2025
+  
+  // 3. Formateo a YYYY-MM-DD (sin horas/minutos/segundos)
+  startDateFilter = startOfWeek.format('YYYY-MM-DD');
+  endDateFilter = endOfWeek.format('YYYY-MM-DD');
+  
+  // 4. Verificación IRREFUTABLE
+  console.log(`FILTRO ACTIVO: ${startDateFilter} a ${endDateFilter}`);
+  // Output: "FILTRO ACTIVO: 2025-07-21 a 2025-07-27"
+  break;
+}
     case 'last_month':
       // Mes actual desde el día 1
       startDateFilter = now.startOf('month');
@@ -394,19 +406,22 @@ const renderFilterInput = () => {
         </FormControl>
       );
     
-    case 'boolean':
-      return (
-        <FormControl fullWidth size="small">
-          <InputLabel>Valor</InputLabel>
-          <Select
-            value={currentFilter.value}
-            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value === 'true'})}
-          >
-            <MenuItem value={true}>Sí</MenuItem>
-            <MenuItem value={false}>No</MenuItem>
-          </Select>
-        </FormControl>
-      );
+   case 'boolean':
+  return (
+    <FormControl fullWidth size="small">
+      <InputLabel>Valor</InputLabel>
+      <Select
+        value={currentFilter.value?.toString() || ''} // Convertimos a string
+        onChange={(e) => setCurrentFilter({
+          ...currentFilter, 
+          value: e.target.value === 'true' // Convertimos de vuelta a boolean
+        })}
+      >
+        <MenuItem value="true">Sí</MenuItem>
+        <MenuItem value="false">No</MenuItem>
+      </Select>
+    </FormControl>
+  );
     
     case 'date':
       return (
@@ -595,7 +610,7 @@ console.log(stats)
                   label="Rango de tiempo"
                 >
                   <MenuItem value="todos">Todos los registros</MenuItem>
-                  <MenuItem value="last_week">Esta semana</MenuItem>
+                  <MenuItem value="this_week">Esta semana</MenuItem>
                   <MenuItem value="last_month">Mes actual</MenuItem>
               
                   <MenuItem value="last_year">Este año</MenuItem>
@@ -657,11 +672,13 @@ console.log(stats)
 
               {/* Botón para añadir filtro */}
               {currentFilter.column && (
+                // Botón modificado
                 <Button 
                   variant="contained" 
                   onClick={addFilter}
                   disabled={
-                    !currentFilter.value || 
+                    currentFilter.value === undefined || 
+                    currentFilter.value === null ||
                     (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
                   }
                   startIcon={<Add />}
@@ -1037,7 +1054,7 @@ console.log(stats)
         <TableCell>Fundraiser</TableCell>
         <TableCell align="right">Cuota media</TableCell>
         <TableCell align="right">Socios</TableCell>
-        <TableCell>Progreso</TableCell>
+       
       </TableRow>
     </TableHead>
     <TableBody>
@@ -1071,23 +1088,7 @@ console.log(stats)
               {fundraiser.totalSocios}
             </Typography>
           </TableCell>
-          
-          <TableCell>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.min(fundraiser.cuotaMediaMensual * 2, 100)}
-              sx={{ 
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: 'action.hover',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: index < 3 ? 
-                    ['#FFD700', '#C0C0C0', '#CD7F32'][index] : 
-                    'primary.main'
-                }
-              }} 
-            />
-          </TableCell>
+        
         </TableRow>
       ))}
     </TableBody>
@@ -1428,11 +1429,13 @@ function calculateStats(filteredSocios, allSocios) {
       stats.nuevosEsteMes++;
     }
   });
+
+
 // Construcción de fundraisersStats (como ya lo tienes)
 const fundraisersStats = {};
 filteredSocios.forEach(socio => {
   const importe = parseFloat(socio.importe) || 0;
-  const facturable = !noFacturable(socio);
+  const facturable = socio
   const periodicidad = socio.periodicidad;
 
   if (facturable && socio.fundraiser) {

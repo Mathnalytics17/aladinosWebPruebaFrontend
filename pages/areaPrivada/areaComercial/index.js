@@ -119,9 +119,9 @@ console.log(fundraisers_dic,fundraisers_list)
       id: 'status', 
       label: 'Estado', 
       type: 'multi-select', 
-      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente'] 
     },
-    { id: 'fecha_creacion', label: 'Fecha Creación', type: 'date' },
+
     { id: 'nombre_socio', label: 'Nombre', type: 'text' },
     { id: 'apellido_socio', label: 'Apellidos', type: 'text' },
     { id: 'telefono_socio', label: 'Teléfono', type: 'text' },
@@ -351,7 +351,10 @@ const applyFilters = (data) => {
         case 'contains':
           return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
         case 'equals':
-          return String(value) === String(filterValue);
+        if (column.type === 'number') {
+          // Comparación directa para numeric(10,2)
+          return Number(value).toFixed(2) === Number(filterValue).toFixed(2);
+        }
         case 'startsWith':
           return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
         case 'endsWith':
@@ -378,17 +381,17 @@ const applyFilters = (data) => {
       
       switch(timeRange) {
         case 'last_week': {
-            // Obtener el inicio de la semana pasada (lunes) y el final (domingo)
-            const startOfLastWeek = dayjs().subtract(1, 'week').startOf('week');
-            const endOfLastWeek = startOfLastWeek.endOf('week');
-            
-            // Convertir a formato ISO y ajustar zona horaria si es necesario
-            startDateFilter = startOfLastWeek.format('YYYY-MM-DD');
-            endDateFilter = endOfLastWeek.format('YYYY-MM-DD');
-            
-            // Para debug: verificar los rangos
-            console.log(`Rango semana pasada: ${startDateFilter} a ${endDateFilter}`);
-            break;
+             // Obtener el inicio de la semana actual (lunes) y el final (domingo)
+              const startOfCurrentWeek = dayjs().startOf('week');
+              const endOfCurrentWeek = dayjs().endOf('week');
+              
+              // Convertir a formato ISO
+              startDateFilter = startOfCurrentWeek.format('YYYY-MM-DD');
+              endDateFilter = endOfCurrentWeek.format('YYYY-MM-DD');
+              
+              // Para debug: verificar los rangos
+              console.log(`Rango semana ACTUAL: ${startDateFilter} a ${endDateFilter}`);
+              break;
           }
         case 'last_month':
           // Mes actual desde el día 1

@@ -190,7 +190,7 @@ console.log(fundraisers_dic,fundraisers_list)
       id: 'status', 
       label: 'Estado', 
       type: 'multi-select', 
-      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente', 'Incompleto'] 
+      options: ['Verificado', 'Baja', 'Ilocalizable', 'Incidencia', 'Pendiente'] 
     },
   
     { id: 'nombre_socio', label: 'Nombre', type: 'text' },
@@ -426,6 +426,9 @@ edades.forEach(edad => {
     });
   };
 
+
+
+
 // Manejar cambios en el filtro actual
 const handleFilterColumnChange = (e) => {
   const columnId = e.target.value;
@@ -530,12 +533,16 @@ const applyFilters = (data) => {
         return value === filterValue;
       }
       
+      console.log('Valor de socio:', value, 'Operador:', filter.operator, 'Filtro:', filterValue);
       // Manejar operadores para texto, números y fechas
       switch(filter.operator) {
         case 'contains':
           return String(value || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
         case 'equals':
-          return String(value) === String(filterValue);
+        if (column.type === 'number') {
+          // Comparación directa para numeric(10,2)
+          return Number(value).toFixed(2) === Number(filterValue).toFixed(2);
+        }
         case 'startsWith':
           return String(value || '').toLowerCase().startsWith(String(filterValue || '').toLowerCase());
         case 'endsWith':
@@ -894,19 +901,22 @@ const renderFilterInput = () => {
         </FormControl>
       );
     
-    case 'boolean':
-      return (
-        <FormControl fullWidth size="small">
-          <InputLabel>Valor</InputLabel>
-          <Select
-            value={currentFilter.value}
-            onChange={(e) => setCurrentFilter({...currentFilter, value: e.target.value === 'true'})}
-          >
-            <MenuItem value={true}>Sí</MenuItem>
-            <MenuItem value={false}>No</MenuItem>
-          </Select>
-        </FormControl>
-      );
+      case 'boolean':
+  return (
+    <FormControl fullWidth size="small">
+      <InputLabel>Valor</InputLabel>
+      <Select
+        value={currentFilter.value?.toString() || ''} // Convertimos a string
+        onChange={(e) => setCurrentFilter({
+          ...currentFilter, 
+          value: e.target.value === 'true' // Convertimos de vuelta a boolean
+        })}
+      >
+        <MenuItem value="true">Sí</MenuItem>
+        <MenuItem value="false">No</MenuItem>
+      </Select>
+    </FormControl>
+  );
     
     case 'date':
       return (
@@ -1175,14 +1185,7 @@ const renderOperatorSelect = () => {
                         >
                           Verificados este mes
                         </Button>
-                        <Button
-                          variant={incidenceFilter ? "contained" : "outlined"}
-                          startIcon={<Warning />}
-                          onClick={() => setIncidenceFilter(!incidenceFilter)}
-                          color={incidenceFilter ? "warning" : "inherit"}
-                        >
-                          Con incidencias
-                        </Button>
+                    
                       </Box>
                     </Box>
 
@@ -1210,22 +1213,24 @@ const renderOperatorSelect = () => {
                         availableColumns.find(c => c.id === currentFilter.column)?.type !== 'boolean' &&
                         renderOperatorSelect()}
 
-                      {/* Input de valor según el tipo de columna */}
-                      {currentFilter.column && renderFilterInput()}
+                       {/* Input de valor según el tipo de columna */}
+              {currentFilter.column && renderFilterInput()}
 
-                      {/* Botón para añadir filtro */}
-                      {currentFilter.column && (
-                        <Button 
-                          variant="contained" 
-                          onClick={addFilter}
-                          disabled={
-                            !currentFilter.value || 
-                            (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
-                          }
-                          startIcon={<Add />}
-                        >
-                          Añadir filtro
-                        </Button>
+              {/* Botón para añadir filtro */}
+              {currentFilter.column && (
+                // Botón modificado
+                <Button 
+                  variant="contained" 
+                  onClick={addFilter}
+                  disabled={
+                    currentFilter.value === undefined || 
+                    currentFilter.value === null ||
+                    (Array.isArray(currentFilter.value) && currentFilter.value.length === 0)
+                  }
+                  startIcon={<Add />}
+                >
+                  Añadir filtro
+                </Button>
                       )}
                     </Box>
 
@@ -1533,18 +1538,18 @@ const renderOperatorSelect = () => {
                                   </Typography>
                                 
                                 <Box>
-                                {selectedSocio?.id && (
-                                <Button 
-                                  onClick={handleDeleteSocio} 
-                                  color="error"
-                                  disabled={saving}
-                                  startIcon={<Delete />}
-                                  sx={{ mr: 3 }}
-                                  variant="outlined"
-                                >
-                                  {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
-                                </Button>
-                              )}
+                                {selectedSocio?.id && currentUserRole !== "GESTOR" && (
+  <Button 
+    onClick={handleDeleteSocio} 
+    color="error"
+    disabled={saving}
+    startIcon={<Delete />}
+    sx={{ mr: 3 }}
+    variant="outlined"
+  >
+    {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
+  </Button>
+)}
                                   {fichaTab === 0 && (
 
                                     
