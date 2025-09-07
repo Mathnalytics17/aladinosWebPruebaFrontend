@@ -14,7 +14,7 @@ import {
 import Avatar from '@mui/material/Avatar';
 import ProtectedRole from '@/shared/components/protectedRoute';
 import { useRouter } from 'next/router';
-
+import { useTrazability } from '../../../shared/hooks/useTrazability';
 const AdminUsers = () => {
   const router = useRouter();
   const [users, setUsers] = useState([]);
@@ -28,9 +28,8 @@ const AdminUsers = () => {
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
   // Configuración de axios con interceptor
-
   const api = axios.create({
-    baseURL: `${process.env.NEXT_PUBLIC_API_URL}`,
+    baseURL: 'http://127.0.0.1:8000/api/',
   });
 
   // Interceptor para añadir token
@@ -86,7 +85,7 @@ const AdminUsers = () => {
       }
     }
   };
-
+ useTrazability('NombreDeLaPagina');
   useEffect(() => {
     fetchCurrentUser();
     fetchUsers();
@@ -177,10 +176,13 @@ const AdminUsers = () => {
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography variant="h5" gutterBottom>
-                Administración de Usuarios
-              </Typography>
-            </Grid>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
+      Administración de Usuarios
+    </Typography>
+
+  </Box>
+</Grid>
             <Grid item xs={8} md={4}>
               <TextField
                 fullWidth
@@ -201,22 +203,32 @@ const AdminUsers = () => {
               >
                 Nuevo
               </Button>
-              {currentUserRole === 'JEFE' ? (
-                <Button
-                  variant="outlined"
-                  onClick={() => router.push('/areaPrivada')}
-                  startIcon={<ArrowBack />}
-                  sx={{ minWidth: 'auto' }}
-                />
-              ) : (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleLogout}
-                  startIcon={<ExitToApp />}
-                  sx={{ minWidth: 'auto' }}
-                />
-              )}
+                  
+    <Button
+      variant="outlined"
+      startIcon={<ArrowBack />} // Asegúrate de importar ArrowBack
+      onClick={() => {
+        // Redirigir según el rol del usuario actual
+        const userRoles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+        const userRole = userRoles[0] || ''; // Tomar el primer rol
+        
+        const redirectPaths = {
+          'JEFE': '/areaPrivada',
+          'GESTOR': '/areaPrivada/areaAdministrador',
+          'COMERCIAL': '/areaPrivada/areaComercial',
+          'FINANZAS': '/areaPrivada/finanzas',
+          'SOPORTE': '/areaPrivada/soporte'
+        };
+        
+        router.push(redirectPaths[userRole] || '/areaPrivada');
+      }}
+      sx={{
+        minWidth: '100px',
+        whiteSpace: 'nowrap'
+      }}
+    >
+      Volver
+    </Button>
             </Grid>
           </Grid>
         </Paper>
@@ -305,12 +317,7 @@ const AdminUsers = () => {
               <><LockOpen sx={{ mr: 1 }} /> Activar</>
             )}
           </MenuItem>
-          <MenuItem onClick={() => {
-            handleDelete(anchorEl.user.id);
-            setAnchorEl(null);
-          }}>
-            <Delete sx={{ mr: 1 }} /> Eliminar
-          </MenuItem>
+        
         </Menu>
 
         {/* Diálogo solo para edición (la creación se maneja en signUp) */}
@@ -379,6 +386,8 @@ const AdminUsers = () => {
             <Button variant="contained" onClick={handleSubmit}>
               Guardar
             </Button>
+
+
           </DialogActions>
         </Dialog>
 

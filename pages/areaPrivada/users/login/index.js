@@ -1,5 +1,5 @@
 // pages/login.js
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../../context/authContext.js';
 import {
@@ -14,7 +14,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login,user,isLoading } = useAuth();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,6 +26,7 @@ export default function LoginPage() {
     password: '',
   });
 
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -62,6 +63,22 @@ export default function LoginPage() {
     setFieldErrors(errors);
     return isValid;
   };
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (!isLoading && user) {
+      // Usar la lógica de redirección por roles que ya tienes
+      const userRole = user.role;
+      const redirectPaths = {
+        'JEFE': '/areaPrivada',
+        'GESTOR': '/areaPrivada/areaAdministrador',
+        'COMERCIAL': '/areaPrivada/areaComercial',
+        'FINANZAS': '/areaPrivada/finanzas',
+        'SOPORTE': '/areaPrivada/soporte'
+      };
+      
+      router.push(redirectPaths[userRole] || '/areaPrivada');
+    }
+  }, [user, isLoading, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

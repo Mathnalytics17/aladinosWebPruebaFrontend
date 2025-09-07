@@ -27,6 +27,7 @@ import ProtectedRole from '@/shared/components/protectedRoute';
 import { useRouter } from 'next/router';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useTrazability } from '../../../shared/hooks/useTrazability';
 // Componentes estilizados
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
@@ -77,7 +78,7 @@ export default function PanelComercial() {
     operator: 'contains',
     value: ''
   }); 
-  
+   useTrazability('NombreDeLaPagina');
   useEffect(() => {
     const fetchData = async () => {
       try {

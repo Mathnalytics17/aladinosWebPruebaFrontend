@@ -18,12 +18,18 @@ const ProtectedRole = ({ children, requiredRoles, redirectPath = '/unauthorized'
   };
 
   // Redirige si no cumple (ahora con useEffect para mejor manejo)
-  useEffect(() => {
-    if (!isLoading && !checkAccess()) {
+ useEffect(() => {
+  if (!isLoading && !checkAccess()) {
+    // Usar router.pathname en lugar de window.location
+    const currentPath = router.pathname;
+    
+    if (currentPath === '/home') {
+      router.push('/home/login');
+    } else {
       router.push(user ? redirectPath : '/areaPrivada/users/login');
     }
-  }, [isLoading, user, requiredRoles]);
-
+  }
+}, [isLoading, user, requiredRoles, router]); // Añadir router a las dependencias
   if (isLoading) {
     return <LoadingSpinner />; // Igual que antes
   }

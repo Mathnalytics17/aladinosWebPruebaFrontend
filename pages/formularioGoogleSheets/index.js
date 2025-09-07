@@ -26,6 +26,15 @@ import "react-datepicker/dist/react-datepicker.css"; // Estilos de react-datepic
 import es from "date-fns/locale/es"; // Locale en español
 import SignatureCanvas from "react-signature-canvas"; // Componente de firma
 import Link from "next/link"; // Importa Link desde next/link
+  import { useAuth } from '@/context/authContext'; // Importar el contexto de autenticación
+import ProtectedRole from '@/shared/components/protectedRoute';
+import { useTrazability } from '../../shared/hooks/useTrazability';
+
+
+
+
+
+
 export default function FormularioGoogleSheets() {
   const { register, handleSubmit, control, formState: { errors }, setValue, watch,getValues } = useForm({
     defaultValues: {
@@ -46,9 +55,14 @@ export default function FormularioGoogleSheets() {
   const abortControllerRef = useRef(new AbortController());
   const router = useRouter(); // Obtén el objeto router
 
-  
+ useTrazability('NombreDeLaPagina');
 
-
+// Dentro de tu componente:
+const { user } = useAuth();
+const userRole = user?.role;
+// Determinar si el usuario es comercial
+const isComercial = userRole === 'COMERCIAL';
+console.log(userRole)
   const apiUrl =process.env.NEXT_PUBLIC_API_URL;
 
     // Configuración de axios con cancelación
@@ -306,26 +320,58 @@ const prepararDatosParaEnvio = (data) => {
  
   const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // Hacer ambas peticiones en paralelo para mejor rendimiento
+      const [fundraisersResponse, usersResponse] = await Promise.all([
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}users/`)
+      ]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}users/fundraisers/`// Nota la barra adicional
-         
-          
-        );
-        
-        setFundraisers(response.data); // Axios usa response.data
-      } catch (err) {
-        setError(err.response?.data?.message || 'Error fetching fundraisers');
-      } finally {
-        setLoading(false);
-      }
-    };
+      console.log('Datos de fundraisers:', fundraisersResponse.data);
+      console.log('Datos de usuarios:', usersResponse.data);
 
-    fetchData();
-  }, []);
+      // Crear un mapa de usuarios por ID para fácil acceso
+      const usersMap = {};
+      usersResponse.data.forEach(user => {
+        usersMap[user.id] = user;
+      });
+
+      // Filtrar y cruzar los datos
+      const activeFundraisers = fundraisersResponse.data
+        .filter(fundraiser => {
+          // Verificar si el usuario asociado existe y está activo
+          const user = usersMap[fundraiser.user];
+          return user && user.is_active;
+        })
+        .map(fundraiser => {
+          // Combinar datos del fundraiser con datos del usuario
+          const user = usersMap[fundraiser.user];
+          return {
+            ...fundraiser,
+            email: user.email,
+            email_verified: user.email_verified,
+            role: user.role,
+            is_active: user.is_active,
+            // Mantener ambos códigos por si son diferentes
+            fundraiser_code: fundraiser.fundraiser_code,
+            user_fundRaiserCode: user.fundRaiserCode
+          };
+        });
+
+      console.log('Fundraisers activos:', activeFundraisers);
+      setFundraisers(activeFundraisers);
+
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error fetching data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
 
   console.log(fundraisers)
@@ -456,56 +502,106 @@ const prepararDatosParaEnvio = (data) => {
   };
 
   return (
-    
-    <Container maxWidth="sm" sx={{ mt: 10, mb: 10, width: '100%', overflow: 'hidden' }}>
+     <ProtectedRole requiredRoles={["COMERCIAL", "GESTOR", "JEFE"]}>
+<Container maxWidth="sm" sx={{ mt: 10, mb: 10, width: '100%', overflow: 'hidden' }}>
    {error && <Alert severity="error">{error}</Alert>}
   {success && <Alert severity="success">Registro enviado con éxito</Alert>}
   {isDraft && <Alert severity="info">Tienes un borrador guardado. Puedes continuar completando el formulario.</Alert>}
 
   <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" >
     {/* Sección: Información del Fundraiser */}
-    <Typography variant="h6" gutterBottom>INFORMACIÓN DEL FUNDAISER</Typography>
-    <Grid2 container spacing={3} sx={{ mb: 3 }}>
-      <Grid2 item xs={6}>
-  <FormControl fullWidth error={!!errors.fundraiser_code}>
-    <InputLabel>Código Fundraiser</InputLabel>
-    <Select {...register("fundraiser_code")}
-      sx={{
-        minWidth: "250px", // Ajusta este valor según necesites
-        '& .MuiSelect-select': {
-          padding: '12px 14px', // Ajusta el padding si es necesario
-        },
-      }}>
-  {fundraisers.map((f) => (
-    <MenuItem key={f.fundraiser_code} value={f.fundraiser_code}>{f.fundraiser_code}</MenuItem>
-  ))}
-</Select>
-    {errors.fundraiser_code && (
-      <FormHelperText>Este campo es obligatorio</FormHelperText>
-    )}
-  </FormControl>
-</Grid2>
-<Grid2 item xs={6}>
-  <FormControl fullWidth error={!!errors.fundraiser_name}>
-    <InputLabel>Nombre Fundraiser</InputLabel>
+ <Typography variant="h6" gutterBottom>INFORMACIÓN DEL FUNDAISER</Typography>
+  <Grid2 container spacing={3} sx={{ mb: 3 }}>
     
-<Select {...register("fundraiser_name")}
-  sx={{
-    minWidth: "250px", // Ajusta este valor según necesites
-    '& .MuiSelect-select': {
-      padding: '12px 14px', // Ajusta el padding si es necesario
-    },
-  }}>
-  {fundraisers.map((f) => (
-    <MenuItem key={f.fundraiser_code} value={`${f.first_name} ${f.last_name}`}>{f.first_name} {f.last_name} </MenuItem>
-  ))}
-</Select>
-    {errors.fundraiser_name && (
-      <FormHelperText>Este campo es obligatorio</FormHelperText>
-    )}
-  </FormControl>
-</Grid2>
+    {/* Campo Código Fundraiser */}
+    <Grid2 item xs={6}>
+      <FormControl fullWidth error={!!errors.fundraiser_code}>
+        {isComercial ? (
+          // Si es comercial, mostrar campo deshabilitado sin label flotante
+          <TextField
+            label="Código Fundraiser"
+            value={user.fundRaiserCode || ''}
+            disabled
+            sx={{
+              minWidth: "250px",
+              '& .MuiInputBase-input': {
+                padding: '12px 14px',
+                backgroundColor: '#f5f5f5'
+              },
+            }}
+          />
+        ) : (
+          // Si no es comercial, mostrar el select normal
+          <>
+            <InputLabel>Código Fundraiser</InputLabel>
+            <Select 
+              {...register("fundraiser_code")}
+              sx={{
+                minWidth: "250px",
+                '& .MuiSelect-select': {
+                  padding: '12px 14px',
+                },
+              }}
+            >
+              {fundraisers.map((f) => (
+                <MenuItem key={f.fundraiser_code} value={f.fundraiser_code}>
+                  {f.fundraiser_code}
+                </MenuItem>
+              ))}
+            </Select>
+          </>
+        )}
+        {errors.fundraiser_code && (
+          <FormHelperText>Este campo es obligatorio</FormHelperText>
+        )}
+      </FormControl>
     </Grid2>
+    
+    {/* Campo Nombre Fundraiser */}
+    <Grid2 item xs={6}>
+      <FormControl fullWidth error={!!errors.fundraiser_name}>
+        {isComercial ? (
+          // Si es comercial, mostrar campo deshabilitado sin label flotante
+          <TextField
+            label="Nombre Fundraiser"
+            value={`${user.first_name} ${user.last_name}`}
+            disabled
+            sx={{
+              minWidth: "250px",
+              '& .MuiInputBase-input': {
+                padding: '12px 14px',
+                backgroundColor: '#f5f5f5'
+              },
+            }}
+          />
+        ) : (
+          // Si no es comercial, mostrar el select normal
+          <>
+            <InputLabel>Nombre Fundraiser</InputLabel>
+            <Select 
+              {...register("fundraiser_name")}
+              sx={{
+                minWidth: "250px",
+                '& .MuiSelect-select': {
+                  padding: '12px 14px',
+                },
+              }}
+            >
+              {fundraisers.map((f) => (
+                <MenuItem key={f.fundraiser_code} value={`${f.first_name} ${f.last_name}`}>
+                  {f.first_name} {f.last_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </>
+        )}
+        {errors.fundraiser_name && (
+          <FormHelperText>Este campo es obligatorio</FormHelperText>
+        )}
+      </FormControl>
+    </Grid2>
+    
+  </Grid2>
 
     {/* Sección: Información Personal */}
     <Typography variant="h6" gutterBottom>INFORMACIÓN PERSONAL</Typography>
@@ -1135,5 +1231,7 @@ const prepararDatosParaEnvio = (data) => {
 
       </form>
     </Container>
+     </ProtectedRole>
+    
   );
 }

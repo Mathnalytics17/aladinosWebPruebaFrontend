@@ -22,6 +22,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import es from 'date-fns/locale/es';
 import ProtectedRole from '@/shared/components/protectedRoute';
+import { useTrazability } from '../../../shared/hooks/useTrazability';
+
 const AreaJefe = () => {
   const [socios, setSocios] = useState([]);
   const [comerciales, setComerciales] = useState([]);
@@ -37,7 +39,7 @@ const AreaJefe = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [orderBy, setOrderBy] = useState('fecha_alta');
   const [order, setOrder] = useState('desc');
-
+ useTrazability('NombreDeLaPagina');
   // Obtener datos iniciales
   useEffect(() => {
     const fetchData = async () => {

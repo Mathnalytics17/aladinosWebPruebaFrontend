@@ -10,7 +10,7 @@ import ComercialPanel from './areaComercial/index';
 import StatsPanel from './stats/index';
 import styles from './areaPrivada.module.css'
 
-
+import { useTrazability } from '../../shared/hooks/useTrazability';
 
 import { ThemeProvider } from "next-themes";
 import { SidebarProvider } from "../../shared/components/Sidebar";
@@ -53,7 +53,7 @@ const AreaPrivada = () => {
   };
 
   const tabValue = [ 'estadisticas','admin'].indexOf(tab);
-
+  
   return (
     <AuthProvider>
     <ProtectedRole requiredRoles="JEFE">

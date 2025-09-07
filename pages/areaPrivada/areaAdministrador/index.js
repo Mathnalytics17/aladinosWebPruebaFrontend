@@ -30,6 +30,7 @@ import {
   Switch,
   FormControl,
   InputLabel,
+    DialogContentText,
   Select,
   List,
   ListItem,
@@ -78,6 +79,7 @@ import { es } from 'date-fns/locale';
 import { ArrowBack, ExitToApp } from '@mui/icons-material';
 import Lock from '@mui/icons-material/Lock';
 import LockOpen from '@mui/icons-material/LockOpen';
+import { useTrazability } from '../../../shared/hooks/useTrazability';
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.75rem',
@@ -127,7 +129,7 @@ const AdminPanel = () => {
   const [usersData, setUsersData] = useState([]);
   const [saving, setSaving] = useState(false);
   const [startDate, setStartDate] = React.useState(null);
-  
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 const [endDate, setEndDate] = React.useState(null); 
   const [llamadasData, setLlamadasData] = useState([]);
   const [nuevaLlamada, setNuevaLlamada] = useState({
@@ -148,7 +150,7 @@ const [endDate, setEndDate] = React.useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [fundraisers, setFundraisers] = useState([]);
 
-
+useTrazability('NombreDeLaPagina');
   
   useEffect(() => {
     const fetchData = async () => {
@@ -716,6 +718,13 @@ return matchesSearch && matchesActiveFilters && matchesPending &&
     }
   };
 
+// Función para abrir el modal de confirmación
+const handleOpenDeleteModal = () => setDeleteModalOpen(true);
+
+// Función para cerrar el modal de confirmación
+const handleCloseDeleteModal = () => setDeleteModalOpen(false);
+
+// Función para eliminar el socio (ya la tienes)
 const handleDeleteSocio = async () => {
   if (!selectedSocio) return;
 
@@ -728,6 +737,7 @@ const handleDeleteSocio = async () => {
     setSociosData(updatedData);
     calculateStats(updatedData);
     handleCloseSocio();
+    handleCloseDeleteModal(); // Cerrar el modal después de eliminar
     
     // Opcional: Mostrar notificación de éxito
     alert('Socio eliminado correctamente');
@@ -1065,57 +1075,110 @@ const renderOperatorSelect = () => {
     setSaving(false);
   }
 };
-            
+   
+
+const handleGestionUsuarios = ()=>{
+ router.push("/areaPrivada/users");
+
+
+
+}
         return (
           <ProtectedRole requiredRoles={["GESTOR", "JEFE"]}>
             <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
               {/* Header */}
-              <Box mb={4}>
+              <Box mb={4} >
                   <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="h4" fontWeight={600} mb={1}>Panel de Administración</Typography>
                     
-                    {currentUserRole === 'JEFE' ? (
-                      <Button
-                        startIcon={<ArrowBack />}
-                        onClick={() => router.push('/areaPrivada')}
-                        sx={{ mb: 1 }}
-                      >
-                        Volver
-                      </Button>
-                    ) : currentUserRole === 'GESTOR' ? (
-                      <Button
-                        startIcon={<ExitToApp />} // Asegúrate de importar ExitToApp
-                        onClick={handleLogout}
-                        sx={{ mb: 1, color: 'error.main' }}
-                        variant="outlined"
-                      >
-                        Cerrar sesión
-                      </Button>
-                    ) : null}
+                  
 
                 <Typography variant="body1" color="text.secondary">
                   Gestión completa de socios y comerciales
                 </Typography>
                   </Box>
-                  <Button 
-                variant="contained" 
-                startIcon={<Add />}
-                onClick={() => setSelectedSocio({
-                  // Datos iniciales para un nuevo socio
-                  nombre_socio: '',
-                  apellido_socio: '',
-                  telefono_socio: '',
-                  email_socio: '',
-                  status: 'Pendiente',
-                  is_borrador: true,
-                  devolucion: false,
-                  no_llamadas: 0,
-                  // Añade aquí otros campos necesarios con valores por defecto
-                })}
-                sx={{ height: 'fit-content' }}
-              >
-                Nuevo Socio
-              </Button>
+<Box 
+  sx={{ 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    width: '100%',
+    mb: 2,
+    gap: 2
+  }}
+>
+  {/* Sección izquierda: Botones de Nuevo Socio y Gestión de Usuarios */}
+  <Box sx={{ display: 'flex', gap: 2 }}>
+    <Button 
+      variant="contained" 
+      startIcon={<Add />}
+      onClick={() => setSelectedSocio({
+        nombre_socio: '',
+        apellido_socio: '',
+        telefono_socio: '',
+        email_socio: '',
+        status: 'Pendiente',
+        is_borrador: true,
+        devolucion: false,
+        no_llamadas: 0,
+      })}
+      sx={{ height: 'fit-content' }}
+    >
+      Nuevo Socio
+    </Button>
+
+    <Button 
+      variant="contained" 
+      onClick={handleGestionUsuarios}
+      sx={{ height: 'fit-content' }}
+    >
+      Gestión de usuarios
+    </Button>
+  </Box>
+
+  {/* Sección derecha: Botones de Volver/Cerrar Sesión */}
+  <Box>
+    {currentUserRole === 'JEFE' ? (
+      <Button
+        startIcon={<ArrowBack />}
+        onClick={() => router.push('/areaPrivada')}
+        variant="outlined"
+        sx={{ 
+          minWidth: '120px',
+          borderColor: 'primary.main',
+          color: 'primary.main',
+          '&:hover': {
+            borderColor: 'primary.dark',
+            backgroundColor: 'primary.light',
+            color: 'primary.dark'
+          }
+        }}
+      >
+        Volver
+      </Button>
+    ) : currentUserRole === 'GESTOR' ? (
+      <Button
+        startIcon={<ExitToApp />}
+        onClick={handleLogout}
+        sx={{ 
+          minWidth: '120px',
+          borderColor: 'error.main',
+          color: 'error.main',
+          '&:hover': {
+            borderColor: 'error.dark',
+            backgroundColor: 'error.light',
+            color: 'error.dark'
+          }
+        }}
+        variant="outlined"
+      >
+        Cerrar sesión
+      </Button>
+    ) : null}
+  </Box>
+</Box>
+              
+     
                 </Box>
 
                <Card sx={{ p: 3, mb: 4, boxShadow: '0px 2px 10px rgba(0,0,0,0.05)' }}>
@@ -1448,16 +1511,16 @@ const renderOperatorSelect = () => {
                                 
                                 <Box>
                                 {selectedSocio?.id && currentUserRole !== "GESTOR" && (
-  <Button 
-    onClick={handleDeleteSocio} 
-    color="error"
-    disabled={saving}
-    startIcon={<Delete />}
-    sx={{ mr: 3 }}
-    variant="outlined"
-  >
-    {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
-  </Button>
+<Button 
+  onClick={handleOpenDeleteModal} 
+  color="error"
+  disabled={saving}
+  startIcon={<Delete />}
+  sx={{ mr: 3 }}
+  variant="outlined"
+>
+  {saving ? <CircularProgress size={24} /> : 'Eliminar Socio'}
+</Button>
 )}
                                   {fichaTab === 0 && (
 
@@ -2525,6 +2588,38 @@ const renderOperatorSelect = () => {
           </DialogActions>
         </Dialog>
       </Box>
+
+
+<Dialog
+  open={deleteModalOpen}
+  onClose={handleCloseDeleteModal}
+  aria-labelledby="alert-dialog-title"
+  aria-describedby="alert-dialog-description"
+>
+  <DialogTitle id="alert-dialog-title">
+    Confirmar Eliminación
+  </DialogTitle>
+  <DialogContent>
+    <DialogContentText id="alert-dialog-description">
+      ¿Estás seguro de que deseas eliminar al socio {selectedSocio?.nombre_socio} {selectedSocio?.apellido_socio}?
+      Esta acción no se puede deshacer.
+    </DialogContentText>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={handleCloseDeleteModal} disabled={saving}>
+      Cancelar
+    </Button>
+    <Button 
+      onClick={handleDeleteSocio} 
+      color="error" 
+      disabled={saving}
+      startIcon={saving ? <CircularProgress size={16} /> : null}
+      autoFocus
+    >
+      {saving ? 'Eliminando...' : 'Eliminar'}
+    </Button>
+  </DialogActions>
+</Dialog>
     </ProtectedRole>
   );
 };

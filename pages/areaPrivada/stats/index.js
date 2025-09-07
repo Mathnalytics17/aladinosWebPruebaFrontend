@@ -35,6 +35,11 @@ import ProtectedRole from '@/shared/components/protectedRoute';
 import { ArrowBack, ExitToApp } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import EuroSymbol from '@mui/icons-material/EuroSymbol';
+import { useTrazability } from '../../../shared/hooks/useTrazability';
+
+
+
+
 const DashboardSocios = () => {
    const router = useRouter();
   const theme = useTheme();
@@ -59,6 +64,7 @@ const DashboardSocios = () => {
     value: ''
   });
   const [fundraisers, setFundraisers] = useState([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -78,7 +84,7 @@ const DashboardSocios = () => {
 
     fetchData();
   }, []);
-
+   useTrazability('NombreDeLaPagina');
   console.log(fundraisers)
 // Generar el nuevo array con el formato deseado
 const fundraisers_dic = fundraisers.map(persona => {
@@ -388,6 +394,7 @@ const renderFilterInput = () => {
   switch(column.type) {
     case 'multi-select':
       return (
+        
         <FormControl fullWidth size="small">
           <InputLabel>Valores</InputLabel>
           <Select
@@ -519,6 +526,8 @@ if (error) {
   );
 }
 console.log(stats)
+
+
   return (
     <ProtectedRole requiredRoles={["JEFE"]}>
       <Box sx={{ p: 3, backgroundColor: '#f9fafc', minHeight: '100vh' }}>
@@ -1455,7 +1464,7 @@ filteredSocios.forEach(socio => {
   
     if (!fundraisersStats[fundraiserId].sociosIds.has(socio.id)) {
       const cuotaMensual = calcularFacturacionMensual(importe, periodicidad);
-      console.log(cuotaMensual)
+     
       fundraisersStats[fundraiserId].totalCuota += importe;
       fundraisersStats[fundraiserId].totalCuotaMensual += cuotaMensual;
       fundraisersStats[fundraiserId].sociosCount++;
