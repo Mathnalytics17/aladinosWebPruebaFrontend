@@ -392,8 +392,7 @@ useEffect(() => {
     const fechaFormateadahoy = obtenerFechaFormateada();
     const camposObligatorios = [
       "nombre",
-     "fundraiser_code",
-     "fundraiser_name",
+  
      
       "movil",
       
@@ -449,7 +448,19 @@ useEffect(() => {
     fundraiser_code: data.fundraiser_code || '',
     fundraiser_name: data.fundraiser_name || ''
   };
-
+  // Validar campos del fundraiser
+  if (!fundraiserData.fundraiser_code) {
+    toast.error("El código de fundraiser es obligatorio.");
+    setIsSubmitting(false);
+    setLoading(false);
+    return;
+  }
+  if (!fundraiserData.fundraiser_name) {
+    toast.error("El nombre de fundraiser es obligatorio.");
+    setIsSubmitting(false);
+    setLoading(false);
+    return;
+  }
   console.log(fundraiserData)
       const draftData = {
           ...fundraiserData, // Incluir los datos del fundraiser
