@@ -243,8 +243,20 @@ const prepararDatosParaEnvio = (data) => {
   data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
   data.saludo = data.genero === "masculino" ? "D." : "femenino" ? "Dña." : "nada";
 
+      // Para usuarios comerciales, usar los datos del usuario en lugar del formulario
+  const fundraiserData = isComercial ? {
+    fundraiser_code: user?.fundRaiserCode || '',
+    fundraiser_name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
+  } : {
+    fundraiser_code: data.fundraiser_code || '',
+    fundraiser_name: data.fundraiser_name || ''
+  };
+
+  console.log(fundraiserData)
+
   return {
     ...data,
+     ...fundraiserData, // Incluir los datos del fundraiser
     notas: data.notas,
     firma_socio: firmaSocio,
     firma_captador: firmaCaptador,
