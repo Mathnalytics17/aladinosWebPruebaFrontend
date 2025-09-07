@@ -57,6 +57,15 @@ const navigation = [
     active: false,
     
   },
+  
+   {
+    name: "Formulario",
+    href: "/home",
+    icon: PackageSearch,
+    notifications: false,
+    active: false,
+    
+  },
 ] as const
 
 
