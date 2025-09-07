@@ -32,27 +32,34 @@ const AdminUsers = () => {
     baseURL: 'http://127.0.0.1:8000/api/',
   });
 
-  // Interceptor para añadir token
-  api.interceptors.request.use(config => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  }, error => {
-    return Promise.reject(error);
-  });
-
-  // Interceptor para manejar errores 401
-  api.interceptors.response.use(
-    response => response,
-    async error => {
-      if (error.response?.status === 401) {
-        handleLogout();
-      }
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    // Ignorar errores que no son del servidor
+    if (!error.response) {
       return Promise.reject(error);
     }
-  );
+    
+    // Ignorar cancelaciones de axios
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+    
+    // Solo hacer logout en 401 de endpoints críticos
+    if (error.response.status === 401) {
+      const criticalEndpoints = ['/token/', '/me/', '/login/', '/refresh/'];
+      const isCriticalEndpoint = criticalEndpoints.some(endpoint => 
+        error.config.url.includes(endpoint)
+      );
+      
+      if (isCriticalEndpoint) {
+        handleLogout();
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
   // Obtener usuarios
   const fetchUsers = async () => {
