@@ -387,138 +387,118 @@ useEffect(() => {
 
 
   console.log(fundraisers)
-    const saveDraft = async (data) => {
-  // Obtener los datos del fundraiser según el tipo de usuario
-  const fundraiserData = isComercial ? {
-    fundraiser_code: user?.fundRaiserCode || '',
-    fundraiser_name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
-  } : {
-    fundraiser_code: data.fundraiser_code || '',
-    fundraiser_name: data.fundraiser_name || ''
-  };
-
-  console.log("Datos del fundraiser:", fundraiserData);
-
-  // Verificar que todos los campos obligatorios estén completos
-  const camposObligatorios = ["nombre", "movil"];
-  
-  // Validar campos del fundraiser (pueden venir de user o de data)
-  if (!fundraiserData.fundraiser_code) {
-    toast.error("El código de fundraiser es obligatorio.");
-    setIsSubmitting(false);
-    setLoading(false);
-    return;
-  }
-  if (!fundraiserData.fundraiser_name) {
-    toast.error("El nombre de fundraiser es obligatorio.");
-    setIsSubmitting(false);
-    setLoading(false);
-    return;
-  }
-
-  // Validar campos obligatorios comunes
-  for (const campo of camposObligatorios) {
-    if (!data[campo]) {
-      toast.error(`El campo ${campo} es obligatorio.`);
-      setIsSubmitting(false);
-      setLoading(false);
-      return;
-    }
-  }
-
-  try {
+  const saveDraft = async (data) => {
+    // Verificar que todos los campos obligatorios estén completos (excepto no_iban)
     const fechaFormateadahoy = obtenerFechaFormateada();
-    const formatDateToDDMMYYYY = (date) => {
-      if (!(date instanceof Date) || isNaN(date.getTime())) return "";
-      const day = String(date.getUTCDate()).padStart(2, "0");
-      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-      const year = date.getUTCFullYear();
-      return `${day}/${month}/${year}`;
-    };
-
-    const parseDateFromString = (dateString) => {
-      if (typeof dateString === "string") {
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-          const [day, month, year] = dateString.split("/");
-          return new Date(Date.UTC(year, month - 1, day));
-        }
-        return new Date(dateString);
+    const camposObligatorios = [
+      "nombre",
+     "fundraiser_code",
+     "fundraiser_name",
+     
+      "movil",
+      
+    ];
+  
+    for (const campo of camposObligatorios) {
+      if (!data[campo]) {
+        toast.error(`El campo ${campo} es obligatorio.`);
+        setIsSubmitting(false);
+        setLoading(false);
+        return;
       }
-      return null;
-    };
-
-    let fechaNacimiento;
-    if (data.fecha_nacimiento instanceof Date) {
-      fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
-    } else if (typeof data.fecha_nacimiento === "string") {
-      const dateObj = parseDateFromString(data.fecha_nacimiento);
-      fechaNacimiento = formatDateToDDMMYYYY(dateObj);
-    } else {
-      fechaNacimiento = "";
     }
 
-    data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
-    data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
-    data.saludo = data.genero === "masculino" ? "D." : data.genero === "femenino" ? "Dña." : "";
+    try {
+      const fechaFormateadahoy = obtenerFechaFormateada();
+      const formatDateToDDMMYYYY = (date) => {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const year = date.getUTCFullYear();
+        return `${day}/${month}/${year}`;
+      };
 
-    const draftData = {
-      ...data,
-      ...fundraiserData,
-      fecha_ingreso_dato: fechaFormateadahoy,
-      saludo: data.saludo,
-      nombre: data.nombre,
-      apellidos: data.apellidos,
-      tipo_identificacion: data.tipo_identificacion,
-      numero_identificacion: data.numero_identificacion,
-      fecha_nacimiento: fechaNacimiento,
-      via_principal: data.via_principal,
-      cp_direccion: data.cp_direccion,
-      ciudad_direccion: data.ciudad_direccion,
-      estado_provincia: data.estado_provincia,
-      genero: data.genero,
-      recibe_correspondencia: data.recibe_correspondencia,
-      correo_electronico: data.correo_electronico,
-      movil: data.movil,
-      no_iban: data.no_iban,
-      importe: data.importe,
-      otra_cantidad: data.otra_cantidad || '',
-      notas: data.notas,
-      telefono_casa: data.telefono_casa || '',
-      periodicidad: data.periodicidad,
-      primer_canal_captacion: "F2F Boost Impact (Madrid)",
-      canal_entrada: "F2F",
-      recibe_memoria: "SI",
-      medio_pago: "Domiciliación",
-      tipo_pago: "Cuota",
-      concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
-      tipo_relacion: "Socio",
-      fecha_primer_pago: '',
-      mandato: data.mandato || '',
-      persona_id: data.persona_id || '',
-      fecha_alta: null,
-      descripcion: '',
-      nombre_autom: `${data.nombre} ${data.apellidos} - Domiciliación`,
-      nombre_asterisco: `${data.nombre} ${data.apellidos} - Socio`,
-      dia_presentacion: data.dia_presentacion,
-      is_borrador: true,
-    };
-    
-    console.log("Datos completos a enviar:", draftData);
-    setLoadingGuardar(true);
-    const response = await api.post('registro/guardarBorrador/', draftData);
-    
-    setIsDraft(true);
-    toast.success("Borrador guardado correctamente");
-    router.push("/formularioGoogleSheets/successGuardarBorrador");
-  } catch (error) {
-    const errorMessage = handleApiError(error, "Error al guardar borrador");
-    toast.error(errorMessage);
-  } finally {
-    setLoading(false);
-    setLoadingGuardar(false);
-    setIsSubmitting(false);
-  }
-};
+      const parseDateFromString = (dateString) => {
+        if (typeof dateString === "string") {
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+            const [day, month, year] = dateString.split("/");
+            return new Date(Date.UTC(year, month - 1, day));
+          }
+          return new Date(dateString);
+        }
+        return null;
+      };
+
+      let fechaNacimiento;
+      if (data.fecha_nacimiento instanceof Date) {
+        fechaNacimiento = formatDateToDDMMYYYY(data.fecha_nacimiento);
+      } else if (typeof data.fecha_nacimiento === "string") {
+        const dateObj = parseDateFromString(data.fecha_nacimiento);
+        fechaNacimiento = formatDateToDDMMYYYY(dateObj);
+      } else {
+        fechaNacimiento = "";
+      }
+
+      data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
+      data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
+      data.saludo = data.genero === "masculino" ? "D." : "femenino" ? "Dña." : "nada";
+
+      const draftData = {
+        fundraiser_code: data.fundraiser_code,
+        fundraiser_name: data.fundraiser_name,
+        fecha_ingreso_dato: fechaFormateadahoy,
+        saludo: data.saludo,
+        nombre: data.nombre,
+        apellidos: data.apellidos,
+        tipo_identificacion: data.tipo_identificacion,
+        numero_identificacion: data.numero_identificacion,
+        fecha_nacimiento: fechaNacimiento,
+        via_principal: data.via_principal,
+        cp_direccion: data.cp_direccion,
+        ciudad_direccion: data.ciudad_direccion,
+        estado_provincia: data.estado_provincia,
+        genero: data.genero,
+        recibe_correspondencia: data.recibe_correspondencia,
+        correo_electronico: data.correo_electronico,
+        movil: data.movil,
+        no_iban: data.no_iban,
+        importe: data.importe,
+        otra_cantidad: data.otra_cantidad || '',
+        notas: data.notas,
+        telefono_casa: data.telefono_casa || '',
+        periodicidad: data.periodicidad,
+        primer_canal_captacion: "F2F Boost Impact (Madrid)",
+        canal_entrada: "F2F",
+        recibe_memoria: "SI",
+        medio_pago: "Domiciliación",
+        tipo_pago: "Cuota",
+        concepto_recibo: "GRACIAS POR TU AYUDA - Fundación Aladina",
+        tipo_relacion: "Socio",
+        fecha_primer_pago: '',
+        mandato: data.mandato || '',
+        persona_id: data.persona_id || '',
+        fecha_alta: null,
+        descripcion: '',
+        nombre_autom: `${data.nombre} ${data.apellidos} - Domiciliación`,
+        nombre_asterisco: `${data.nombre} ${data.apellidos} - Socio`,
+        dia_presentacion: data.dia_presentacion,
+        is_borrador: true,
+      };
+      setLoadingGuardar(true)
+      const response = await api.post('registro/guardarBorrador/', draftData);
+      
+      setIsDraft(true);
+      toast.success("Borrador guardado correctamente");
+      router.push("/formularioGoogleSheets/successGuardarBorrador");
+    } catch (error) {
+      const errorMessage = handleApiError(error, "Error al guardar borrador");
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+      setLoadingGuardar(true)
+      setIsSubmitting(false);
+    }
+  };
 
 
   const clearSignatureSocio = () => {
