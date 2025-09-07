@@ -28,38 +28,32 @@ const AdminUsers = () => {
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
   // Configuración de axios con interceptor
+
   const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api/',
+    baseURL: `${process.env.NEXT_PUBLIC_API_URL}`,
   });
 
-api.interceptors.response.use(
-  response => response,
-  async error => {
-    // Ignorar errores que no son del servidor
-    if (!error.response) {
-      return Promise.reject(error);
+  // Interceptor para añadir token
+  api.interceptors.request.use(config => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Ignorar cancelaciones de axios
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-    
-    // Solo hacer logout en 401 de endpoints críticos
-    if (error.response.status === 401) {
-      const criticalEndpoints = ['/token/', '/me/', '/login/', '/refresh/'];
-      const isCriticalEndpoint = criticalEndpoints.some(endpoint => 
-        error.config.url.includes(endpoint)
-      );
-      
-      if (isCriticalEndpoint) {
+    return config;
+  }, error => {
+    return Promise.reject(error);
+  });
+
+  // Interceptor para manejar errores 401
+  api.interceptors.response.use(
+    response => response,
+    async error => {
+      if (error.response?.status === 401) {
         handleLogout();
       }
+      return Promise.reject(error);
     }
-    
-    return Promise.reject(error);
-  }
-);
+  );
 
   // Obtener usuarios
   const fetchUsers = async () => {
