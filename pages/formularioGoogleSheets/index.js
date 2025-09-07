@@ -442,10 +442,17 @@ useEffect(() => {
       data.importe = data.importe == "otra_cantidad" ? data.otra_cantidad : data.importe;
       data.recibe_correspondencia = data.recibe_correspondencia === "si" ? "SI" : "NO QUIERE";
       data.saludo = data.genero === "masculino" ? "D." : "femenino" ? "Dña." : "nada";
+  const fundraiserData = isComercial ? {
+    fundraiser_code: user?.fundRaiserCode || '',
+    fundraiser_name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
+  } : {
+    fundraiser_code: data.fundraiser_code || '',
+    fundraiser_name: data.fundraiser_name || ''
+  };
 
+  console.log(fundraiserData)
       const draftData = {
-        fundraiser_code: data.fundraiser_code,
-        fundraiser_name: data.fundraiser_name,
+          ...fundraiserData, // Incluir los datos del fundraiser
         fecha_ingreso_dato: fechaFormateadahoy,
         saludo: data.saludo,
         nombre: data.nombre,
