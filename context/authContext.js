@@ -269,32 +269,38 @@ export function AuthProvider({ children }) {
     };
   }, [router]);
 
-  const login = async (email, password) => {
-    setIsLoading(true);
-    try {
-      if (!validateEmail(email)) throw new Error('Email inválido');
-      if (password.length < 6) throw new Error('Contraseña muy corta');
-      
-      const response = await api.post('/users/token/', { email, password });
-      
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      
-      const userData = await loadUser();
-      const roles = JSON.parse(localStorage.getItem('user_roles')) || [];
+  const login = async (email, password, loginOrigin = 'default') => {
+  setIsLoading(true);
+  try {
+    if (!validateEmail(email)) throw new Error('Email inválido');
+    if (password.length < 6) throw new Error('Contraseña muy corta');
+    
+    const response = await api.post('/users/token/', { email, password });
+    
+    localStorage.setItem('access_token', response.data.access);
+    localStorage.setItem('refresh_token', response.data.refresh);
+    
+    const userData = await loadUser();
+    const roles = JSON.parse(localStorage.getItem('user_roles')) || [];
+    
+    // Redirección condicional según el origen del login
+    if (loginOrigin === 'home') {
+      router.push('/home');
+    } else {
       router.push(getRedirectPathByRole(roles[0] || 'USER'));
-      
-      return { success: true, user: userData };
-    } catch (error) {
-      const errorMessage = error.response?.status === 401 
-        ? 'Credenciales incorrectas' 
-        : ApiErrorHandler.getErrorMessage(error);
-      toast.error(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    return { success: true, user: userData };
+  } catch (error) {
+    const errorMessage = error.response?.status === 401 
+      ? 'Credenciales incorrectas' 
+      : ApiErrorHandler.getErrorMessage(error);
+    toast.error(errorMessage);
+    return { success: false, error: errorMessage };
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const logout = () => {
     localStorage.clear();
