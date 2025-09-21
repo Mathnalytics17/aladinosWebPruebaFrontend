@@ -15,6 +15,7 @@ import Avatar from '@mui/material/Avatar';
 import ProtectedRole from '@/shared/components/protectedRoute';
 import { useRouter } from 'next/router';
 import { useTrazability } from '../../../shared/hooks/useTrazability';
+
 const AdminUsers = () => {
   const router = useRouter();
   const [users, setUsers] = useState([]);
@@ -26,9 +27,10 @@ const AdminUsers = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // Configuración de axios con interceptor
-
   const api = axios.create({
     baseURL: `${process.env.NEXT_PUBLIC_API_URL}`,
   });
@@ -86,14 +88,16 @@ const AdminUsers = () => {
       }
     }
   };
- useTrazability('NombreDeLaPagina');
+
+  useTrazability('NombreDeLaPagina');
+  
   useEffect(() => {
     fetchCurrentUser();
     fetchUsers();
   }, []);
 
   // Roles disponibles
-  const roles = ['JEFE', 'ADMIN', 'COMERCIAL', 'SOPORTE', 'SOCIO'];
+  const roles = ['JEFE', 'COMERCIAL', 'GESTOR'];
 
   // Manejar acciones
   const handleCreate = () => {
@@ -111,9 +115,17 @@ const AdminUsers = () => {
       await api.delete(`users/${id}/`);
       setSnackbar({ open: true, message: 'Usuario eliminado', severity: 'success' });
       fetchUsers();
+      setDeleteConfirmOpen(false);
     } catch (err) {
       setSnackbar({ open: true, message: 'Error al eliminar', severity: 'error' });
+      setDeleteConfirmOpen(false);
     }
+  };
+
+  const handleDeleteClick = (user) => {
+    setUserToDelete(user);
+    setDeleteConfirmOpen(true);
+    setAnchorEl(null);
   };
 
   const handleToggleStatus = async (user) => {
@@ -162,10 +174,10 @@ const AdminUsers = () => {
   // Estilos para roles
   const roleStyles = {
     JEFE: { color: '#d32f2f', bgcolor: '#ffebee' },
-    ADMIN: { color: '#7b1fa2', bgcolor: '#f3e5f5' },
+    GESTOR: { color: '#7b1fa2', bgcolor: '#f3e5f5' },
     COMERCIAL: { color: '#0288d1', bgcolor: '#e3f2fd' },
-    SOPORTE: { color: '#00796b', bgcolor: '#e0f2f1' },
-    SOCIO: { color: '#f57c00', bgcolor: '#fff3e0' }
+
+   
   };
 
   if (loading) return <Typography>Cargando usuarios...</Typography>;
@@ -177,13 +189,12 @@ const AdminUsers = () => {
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={6}>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-    <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
-      Administración de Usuarios
-    </Typography>
-
-  </Box>
-</Grid>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
+                  Administración de Usuarios
+                </Typography>
+              </Box>
+            </Grid>
             <Grid item xs={8} md={4}>
               <TextField
                 fullWidth
@@ -205,31 +216,31 @@ const AdminUsers = () => {
                 Nuevo
               </Button>
                   
-    <Button
-      variant="outlined"
-      startIcon={<ArrowBack />} // Asegúrate de importar ArrowBack
-      onClick={() => {
-        // Redirigir según el rol del usuario actual
-        const userRoles = JSON.parse(localStorage.getItem('user_roles') || '[]');
-        const userRole = userRoles[0] || ''; // Tomar el primer rol
-        
-        const redirectPaths = {
-          'JEFE': '/areaPrivada',
-          'GESTOR': '/areaPrivada/areaAdministrador',
-          'COMERCIAL': '/areaPrivada/areaComercial',
-          'FINANZAS': '/areaPrivada/finanzas',
-          'SOPORTE': '/areaPrivada/soporte'
-        };
-        
-        router.push(redirectPaths[userRole] || '/areaPrivada');
-      }}
-      sx={{
-        minWidth: '100px',
-        whiteSpace: 'nowrap'
-      }}
-    >
-      Volver
-    </Button>
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBack />}
+                onClick={() => {
+                  // Redirigir según el rol del usuario actual
+                  const userRoles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+                  const userRole = userRoles[0] || ''; // Tomar el primer rol
+                  
+                  const redirectPaths = {
+                    'JEFE': '/areaPrivada',
+                    'GESTOR': '/areaPrivada/areaAdministrador',
+                    'COMERCIAL': '/areaPrivada/areaComercial',
+                    'FINANZAS': '/areaPrivada/finanzas',
+                    'SOPORTE': '/areaPrivada/soporte'
+                  };
+                  
+                  router.push(redirectPaths[userRole] || '/areaPrivada');
+                }}
+                sx={{
+                  minWidth: '100px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Volver
+              </Button>
             </Grid>
           </Grid>
         </Paper>
@@ -308,6 +319,7 @@ const AdminUsers = () => {
           }}>
             <Edit sx={{ mr: 1 }} /> Editar
           </MenuItem>
+          
           <MenuItem onClick={() => {
             handleToggleStatus(anchorEl.user);
             setAnchorEl(null);
@@ -318,7 +330,10 @@ const AdminUsers = () => {
               <><LockOpen sx={{ mr: 1 }} /> Activar</>
             )}
           </MenuItem>
-        
+          
+          <MenuItem onClick={() => handleDeleteClick(anchorEl.user)}>
+            <Delete sx={{ mr: 1 }} /> Eliminar
+          </MenuItem>
         </Menu>
 
         {/* Diálogo solo para edición (la creación se maneja en signUp) */}
@@ -387,8 +402,43 @@ const AdminUsers = () => {
             <Button variant="contained" onClick={handleSubmit}>
               Guardar
             </Button>
+          </DialogActions>
+        </Dialog>
 
-
+        {/* Modal de confirmación para eliminar usuario */}
+        <Dialog 
+          open={deleteConfirmOpen} 
+          onClose={() => setDeleteConfirmOpen(false)} 
+          fullWidth 
+          maxWidth="sm"
+        >
+          <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+            Confirmar Eliminación
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body1" gutterBottom>
+              ¿Estás seguro de que deseas eliminar el perfil de {userToDelete?.first_name} {userToDelete?.last_name}?
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 2 }}>
+              Eliminarlo supone que desaparezcan todos sus datos de la Intranet: estadísticas de facturación, 
+              socios realizados, cuota media... Esta decisión es irreversible.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setDeleteConfirmOpen(false)}
+              variant="outlined"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => handleDelete(userToDelete.id)}
+              variant="contained" 
+              color="error"
+              startIcon={<Delete />}
+            >
+              Sí, borrar
+            </Button>
           </DialogActions>
         </Dialog>
 

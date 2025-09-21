@@ -231,7 +231,7 @@ export default function SignupPage() {
   }
 
   return (
-    <ProtectedRole requiredRoles={["JEFE"]}>
+    <ProtectedRole requiredRoles={["JEFE","GESTOR"]}>
     <Container maxWidth="sm">
       <Box
         sx={{
